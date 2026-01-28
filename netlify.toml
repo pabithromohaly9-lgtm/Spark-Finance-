@@ -1,6 +1,7 @@
+
 [build]
-  publish = "."
-  command = "echo 'Starting build...'"
+  publish = "dist"
+  command = "npm run build"
 
 [[redirects]]
   from = "/*"
