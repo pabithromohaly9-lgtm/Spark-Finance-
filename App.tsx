@@ -115,8 +115,9 @@ const App: React.FC = () => {
   return (
     <div className="max-w-md mx-auto h-screen bg-slate-50 shadow-2xl flex flex-col font-sans relative overflow-hidden text-slate-900 border-x border-slate-100">
       
-      {/* HEADER SECTION */}
-      <header className={`bg-gradient-to-br from-indigo-600 to-indigo-800 text-white relative z-[60] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isShrunk ? 'p-4 rounded-b-[24px] shadow-lg' : 'p-8 rounded-b-[45px] shadow-xl'}`}>
+      {/* HEADER SECTION WITH TOP GLOW BORDER */}
+      <header className={`bg-gradient-to-br from-indigo-600 to-indigo-800 text-white relative z-[60] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isShrunk ? 'p-4 rounded-b-[24px] shadow-lg header-scrolled' : 'p-8 rounded-b-[45px] shadow-xl'}`}>
+        <div className="header-top-line"></div>
         <div className={`flex justify-between items-center transition-all ${isShrunk ? 'mb-2' : 'mb-8'}`}>
           <div className="flex items-center gap-3">
              <div className={`bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center relative overflow-hidden border border-white/20 transition-all ${isShrunk ? 'w-8 h-8' : 'w-12 h-12'}`}>
@@ -160,8 +161,8 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* MAIN CONTENT AREA */}
-      <main ref={mainRef} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-8" onScroll={handleScroll}>
+      {/* MAIN CONTENT AREA WITH SMOOTH SCROLLING */}
+      <main ref={mainRef} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-8 scroll-smooth" onScroll={handleScroll}>
         {activeTab === 'home' ? (
           <div className="space-y-8 animate-fadeIn pb-32">
             <div className="space-y-4">
@@ -249,7 +250,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* FLOATING ACTION BUTTON - REPLACES BIG BUTTONS */}
+      {/* FLOATING ACTION BUTTON */}
       <div className="fixed bottom-24 right-6 z-[100]">
         {showAddMenu && (
           <div className="flex flex-col gap-3 mb-4 animate-slideUp items-end">
@@ -282,7 +283,7 @@ const App: React.FC = () => {
         </button>
       </nav>
 
-      {/* SMART COMPACT TRANSACTION POPUP */}
+      {/* TRANSACTION MODAL */}
       {modalType && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[200] flex items-center justify-center p-8 animate-fadeIn">
           <div className="bg-white w-full max-w-[310px] rounded-[35px] overflow-hidden shadow-2xl border-none flex flex-col animate-scaleIn">
@@ -298,7 +299,6 @@ const App: React.FC = () => {
             </div>
             
             <form onSubmit={addTransaction} className="px-6 pb-7 space-y-4">
-              {/* COMPACT AMOUNT INPUT */}
               <div className="relative py-2 text-center">
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-[24px] font-black text-slate-300 select-none">৳</span>
@@ -317,7 +317,6 @@ const App: React.FC = () => {
                 </div>
               </div>
               
-              {/* THICKER & MORE VISIBLE INPUT FIELDS */}
               <div className="space-y-3">
                 <div className="relative">
                   <select name="category" className="w-full py-4.5 px-4 bg-slate-50 border border-slate-100 rounded-[22px] font-black text-[14px] text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 appearance-none text-center shadow-sm transition-all border-none">
@@ -334,7 +333,6 @@ const App: React.FC = () => {
                 />
               </div>
 
-              {/* Quick Pills */}
               <div className="flex justify-center gap-1.5">
                 {[500, 1000, 2000].map(val => (
                   <button key={val} type="button" onClick={() => handleQuickAdd(val)} className="px-3 py-2 bg-slate-50 rounded-full text-[10px] font-black text-slate-500 hover:bg-slate-100 transition-all border-none active:scale-90 shadow-sm">+ {val}</button>
@@ -349,7 +347,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* HISTORY MODAL */}
+      {/* HISTORY & SETTINGS MODALS (SAME AS BEFORE) */}
       {showHistory && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex flex-col">
           <div className="bg-white flex-1 mt-20 rounded-t-[50px] p-9 overflow-y-auto animate-slideUp shadow-2xl custom-scrollbar border-none">
@@ -377,7 +375,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* BUDGET SETTINGS */}
       {showBudgetSettings && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex items-end justify-center">
           <div className="bg-white w-full max-w-md rounded-t-[50px] p-9 animate-slideUp shadow-2xl overflow-y-auto max-h-[85vh] custom-scrollbar border-none">
