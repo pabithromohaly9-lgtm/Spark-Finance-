@@ -15,6 +15,7 @@
             background-color: #f8fafc;
             scroll-behavior: smooth;
             -webkit-font-smoothing: antialiased;
+            font-size: 16px; /* Base medium size */
         }
 
         .custom-scrollbar {
@@ -43,12 +44,12 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
+            height: 4px;
             background: #60a5fa;
-            box-shadow: 0 0 15px rgba(96, 165, 250, 0.8);
+            box-shadow: 0 0 18px rgba(96, 165, 250, 0.9);
             z-index: 100;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s ease-in-out;
         }
         .header-scrolled .header-top-line {
             opacity: 1;
