@@ -67,24 +67,33 @@ const App: React.FC = () => {
   };
 
   const fetchAIAdvice = async () => {
-    if (transactions.length === 0) return;
+    if (transactions.length === 0) {
+      alert('পরামর্শ পেতে প্রথমে কিছু লেনদেন যোগ করুন।');
+      return;
+    }
     setLoadingAI(true);
-    const finSummary: FinancialSummary = {
-      totalIncome: summary.income,
-      totalExpenses: summary.expense,
-      balance: summary.balance,
-      savings: summary.balance,
-      previousMonthSavings: (archives[0]?.totalIncome ?? 0) - (archives[0]?.totalExpense ?? 0),
-      categoryBreakdown: summary.breakdown,
-      monthlyHistory: archives.slice(0, 5).map(a => ({
-        month: a.monthName,
-        income: a.totalIncome,
-        expense: a.totalExpense
-      }))
-    };
-    const results = await getFinancialInsights(transactions, finSummary);
-    setInsights(results);
-    setLoadingAI(false);
+    try {
+      const finSummary: FinancialSummary = {
+        totalIncome: summary.income,
+        totalExpenses: summary.expense,
+        balance: summary.balance,
+        savings: summary.balance,
+        previousMonthSavings: archives.length > 0 ? (archives[0].totalIncome - archives[0].totalExpense) : 0,
+        categoryBreakdown: summary.breakdown,
+        monthlyHistory: archives.slice(0, 5).map(a => ({
+          month: a.monthName,
+          income: a.totalIncome,
+          expense: a.totalExpense
+        }))
+      };
+      const results = await getFinancialInsights(transactions, finSummary);
+      setInsights(results);
+    } catch (error) {
+      console.error("AI Error:", error);
+      alert('দুঃখিত, এআই পরামর্শ পেতে সমস্যা হচ্ছে। আবার চেষ্টা করুন।');
+    } finally {
+      setLoadingAI(false);
+    }
   };
 
   const addTransaction = (e: React.FormEvent<HTMLFormElement>) => {
@@ -177,11 +186,11 @@ const App: React.FC = () => {
             
             {!isShrunk && (
               <div className="mt-6 grid grid-cols-2 gap-4 animate-fadeIn">
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10 shadow-sm">
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10 shadow-sm text-center">
                   <p className="text-[11px] uppercase font-bold text-indigo-200 mb-1 tracking-wider">মোট আয়</p>
                   <p className="text-[18px] font-black text-green-300">৳{summary.income}</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10 shadow-sm">
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10 shadow-sm text-center">
                   <p className="text-[11px] uppercase font-bold text-indigo-200 mb-1 tracking-wider">মোট ব্যয়</p>
                   <p className="text-[18px] font-black text-rose-300">৳{summary.expense}</p>
                 </div>
@@ -195,7 +204,7 @@ const App: React.FC = () => {
         {activeTab === 'home' ? (
           <div className="space-y-8 animate-fadeIn pb-32">
             
-            {/* RECENT TRANSACTIONS (Moved Up) */}
+            {/* RECENT TRANSACTIONS */}
             <div className="space-y-4">
               <div className="flex justify-between items-center px-2">
                 <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest">সাম্প্রতিক লেনদেন</h3>
@@ -205,14 +214,14 @@ const App: React.FC = () => {
               {transactions.length > 0 ? (
                 <div className="space-y-4">
                   {transactions.slice(0, 10).map(t => (
-                    <div key={t.id} className="bg-white p-5 rounded-[28px] shadow-sm flex items-center justify-between border border-slate-100/50 animate-slideUp group hover:border-indigo-100 transition-all">
+                    <div key={t.id} className="bg-white p-4 rounded-[28px] shadow-sm flex items-center justify-between border border-slate-100/50 animate-slideUp group hover:border-indigo-100 transition-all">
                       <div className="flex items-center gap-4">
                         <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl shadow-sm ${t.type === TransactionType.INCOME ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
                           <i className={`fas ${CATEGORY_ICONS[t.category] || 'fa-tag'}`}></i>
                         </div>
                         <div>
                           <p className="font-black text-slate-800 text-[15px]">{t.category}</p>
-                          <p className="text-[12px] text-slate-400 font-bold uppercase tracking-tight">{t.note || 'সাধারণ লেনদেন'}</p>
+                          <p className="text-[12px] text-slate-400 font-bold uppercase tracking-tight line-clamp-1">{t.note || 'সাধারণ লেনদেন'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -236,7 +245,7 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {/* BUDGET TRACKER SECTION (Moved Down) */}
+            {/* BUDGET TRACKER SECTION */}
             <div className="space-y-4">
               <div className="flex justify-between items-center px-2">
                 <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest">বাজেট ট্র্যাকার</h3>
@@ -300,7 +309,7 @@ const App: React.FC = () => {
                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm flex-shrink-0 ${insight.type === 'success' ? 'bg-green-500 text-white' : insight.type === 'warning' ? 'bg-rose-500 text-white' : 'bg-blue-500 text-white'}`}>
                    <i className={`fas ${insight.type === 'success' ? 'fa-check' : insight.type === 'warning' ? 'fa-exclamation' : 'fa-info'}`}></i>
                  </div>
-                 <div>
+                 <div className="flex-1">
                    <h4 className="font-black text-slate-800 text-[16px] mb-1.5">{insight.title}</h4>
                    <p className="text-slate-600 text-[14px] font-bold leading-relaxed">{insight.description}</p>
                  </div>
@@ -341,7 +350,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* FLOATING ACTION BUTTON (Smaller) */}
+      {/* FLOATING ACTION BUTTON */}
       <div className="fixed bottom-24 right-6 z-[100]">
         {showAddMenu && (
           <div className="flex flex-col gap-4 mb-4 animate-slideUp items-end">
@@ -358,7 +367,7 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* BOTTOM NAVIGATION (Smaller height) */}
+      {/* BOTTOM NAVIGATION */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-8 py-3 flex justify-between items-center z-[150] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
         <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center py-1.5 border-none bg-transparent transition-all ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-300'}`}>
           <i className={`fas fa-house-chimney text-[18px] mb-1 ${activeTab === 'home' ? 'scale-110' : ''}`}></i>
@@ -468,22 +477,39 @@ const App: React.FC = () => {
 
       {showBudgetSettings && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex items-end justify-center">
-          <div className="bg-white w-full max-w-md rounded-t-[50px] p-8 animate-slideUp shadow-2xl overflow-y-auto max-h-[80vh] custom-scrollbar border-none">
+          <div className="bg-white w-full max-w-md rounded-t-[50px] p-8 animate-slideUp shadow-2xl overflow-y-auto max-h-[85vh] custom-scrollbar border-none">
              <div className="flex justify-between items-center mb-10">
                 <h2 className="text-[20px] font-black text-slate-900 tracking-widest uppercase">বাজেট লক্ষ্য</h2>
-                <button onClick={() => setShowBudgetSettings(false)} className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-900 border-none shadow-sm"><i className="fas fa-times"></i></button>
+                <button onClick={() => setShowBudgetSettings(false)} className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-900 border-none shadow-sm transition-all hover:bg-slate-200"><i className="fas fa-times"></i></button>
              </div>
-             <div className="space-y-5 mb-8">
+             
+             {/* Updated Vertical List Style Budget Settings */}
+             <div className="space-y-6 mb-10">
                 {EXPENSE_CATEGORIES.map(cat => (
-                  <div key={cat} className="space-y-2.5">
-                    <label className="text-[11px] font-black text-slate-500 uppercase ml-3 tracking-widest flex items-center gap-2">
-                       <i className={`fas ${CATEGORY_ICONS[cat]}`}></i> {cat}
-                    </label>
-                    <input type="number" value={budgets[cat] || ''} onChange={(e) => setBudgets({ ...budgets, [cat]: parseFloat(e.target.value) || 0 })} placeholder="৳ বাজেট দিন" className="w-full p-4.5 bg-slate-50 border border-slate-200 rounded-[22px] font-black text-[15px] outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 border-none shadow-inner transition-all" />
+                  <div key={cat} className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between px-2">
+                      <label className="text-[12px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs shadow-sm">
+                           <i className={`fas ${CATEGORY_ICONS[cat]}`}></i>
+                         </div>
+                         {cat}
+                      </label>
+                      <span className="text-[10px] font-black text-slate-300 uppercase">মাসিক সীমা</span>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[16px]">৳</div>
+                      <input 
+                        type="number" 
+                        value={budgets[cat] || ''} 
+                        onChange={(e) => setBudgets({ ...budgets, [cat]: parseFloat(e.target.value) || 0 })} 
+                        placeholder="বাজেট দিন" 
+                        className="w-full pl-12 pr-6 py-5 bg-slate-50 border border-transparent rounded-[24px] font-black text-[16px] text-slate-800 outline-none focus:bg-white focus:border-indigo-100 focus:ring-4 focus:ring-indigo-100/30 transition-all shadow-inner" 
+                      />
+                    </div>
                   </div>
                 ))}
              </div>
-             <button onClick={() => setShowBudgetSettings(false)} className="w-full py-5 bg-indigo-700 text-white rounded-[22px] font-black uppercase text-[13px] tracking-widest shadow-2xl border-none active:scale-95 transition-all">সংরক্ষণ করুন</button>
+             <button onClick={() => setShowBudgetSettings(false)} className="w-full py-6 bg-indigo-600 text-white rounded-[26px] font-black uppercase text-[14px] tracking-widest shadow-2xl border-none active:scale-95 transition-all mb-4">সংরক্ষণ করুন</button>
           </div>
         </div>
       )}
