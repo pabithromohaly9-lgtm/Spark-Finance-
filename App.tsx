@@ -144,8 +144,8 @@ const App: React.FC = () => {
   return (
     <div className="max-w-md mx-auto h-screen bg-slate-50 shadow-2xl flex flex-col font-sans relative overflow-hidden text-slate-900 border-x border-slate-100">
       
-      {/* HEADER SECTION WITH TOP GLOW BORDER */}
-      <header className={`bg-gradient-to-br from-indigo-600 to-indigo-800 text-white relative z-[60] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isShrunk ? 'p-4 rounded-b-[24px] shadow-lg header-scrolled' : 'p-8 rounded-b-[45px] shadow-xl'}`}>
+      {/* HEADER SECTION */}
+      <header className={`bg-gradient-to-br from-indigo-600 to-indigo-800 text-white relative z-[60] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isShrunk ? 'p-4 rounded-b-[24px] shadow-lg' : 'p-8 rounded-b-[45px] shadow-xl'}`}>
         <div className="header-top-line"></div>
         <div className={`flex justify-between items-center transition-all ${isShrunk ? 'mb-2' : 'mb-8'}`}>
           <div className="flex items-center gap-3">
@@ -166,36 +166,77 @@ const App: React.FC = () => {
              </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowBudgetSettings(true)} className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center border-none transition-hover hover:bg-white/20 shadow-sm"><i className="fas fa-bullseye text-[14px]"></i></button>
-            <button onClick={() => setShowHistory(true)} className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center border-none transition-hover hover:bg-white/20 shadow-sm"><i className="fas fa-history text-[14px]"></i></button>
+            <button onClick={() => setShowBudgetSettings(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border-none transition-hover hover:bg-white/20 shadow-sm"><i className="fas fa-bullseye text-[13px]"></i></button>
+            <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border-none transition-hover hover:bg-white/20 shadow-sm"><i className="fas fa-history text-[13px]"></i></button>
           </div>
         </div>
         
         <div className="text-center">
-            <p className={`text-indigo-100 font-bold uppercase transition-all tracking-widest ${isShrunk ? 'text-[12px] opacity-80 mb-0.5' : 'text-[14px] mb-2'}`}>বর্তমান ব্যালেন্স</p>
-            <h2 className={`font-black tracking-tighter text-white transition-all ${isShrunk ? 'text-[32px]' : 'text-[48px]'}`}>{formatCurrency(summary.balance)}</h2>
+            <p className={`text-indigo-100 font-bold uppercase transition-all tracking-widest ${isShrunk ? 'text-[11px] opacity-80 mb-0.5' : 'text-[13px] mb-2'}`}>বর্তমান ব্যালেন্স</p>
+            <h2 className={`font-black tracking-tighter text-white transition-all ${isShrunk ? 'text-[30px]' : 'text-[44px]'}`}>{formatCurrency(summary.balance)}</h2>
             
             {!isShrunk && (
-              <div className="mt-8 grid grid-cols-2 gap-4 animate-fadeIn">
-                <div className="bg-white/10 backdrop-blur-md p-5 rounded-3xl border border-white/10 shadow-sm">
-                  <p className="text-[12px] uppercase font-bold text-indigo-200 mb-1 tracking-wider">মোট আয়</p>
-                  <p className="text-[20px] font-black text-green-300">৳{summary.income}</p>
+              <div className="mt-6 grid grid-cols-2 gap-4 animate-fadeIn">
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10 shadow-sm">
+                  <p className="text-[11px] uppercase font-bold text-indigo-200 mb-1 tracking-wider">মোট আয়</p>
+                  <p className="text-[18px] font-black text-green-300">৳{summary.income}</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md p-5 rounded-3xl border border-white/10 shadow-sm">
-                  <p className="text-[12px] uppercase font-bold text-indigo-200 mb-1 tracking-wider">মোট ব্যয়</p>
-                  <p className="text-[20px] font-black text-rose-300">৳{summary.expense}</p>
+                <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/10 shadow-sm">
+                  <p className="text-[11px] uppercase font-bold text-indigo-200 mb-1 tracking-wider">মোট ব্যয়</p>
+                  <p className="text-[18px] font-black text-rose-300">৳{summary.expense}</p>
                 </div>
               </div>
             )}
         </div>
       </header>
 
-      {/* MAIN CONTENT AREA WITH SMOOTH SCROLLING */}
-      <main ref={mainRef} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-8 scroll-smooth" onScroll={handleScroll}>
+      {/* MAIN CONTENT AREA */}
+      <main ref={mainRef} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-6 scroll-smooth" onScroll={handleScroll}>
         {activeTab === 'home' ? (
           <div className="space-y-8 animate-fadeIn pb-32">
             
-            {/* BUDGET TRACKER SECTION */}
+            {/* RECENT TRANSACTIONS (Moved Up) */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center px-2">
+                <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest">সাম্প্রতিক লেনদেন</h3>
+                <span className="text-[11px] bg-slate-200/50 text-slate-600 px-3 py-1 rounded-full font-black uppercase tracking-tighter">এই মাস</span>
+              </div>
+              
+              {transactions.length > 0 ? (
+                <div className="space-y-4">
+                  {transactions.slice(0, 10).map(t => (
+                    <div key={t.id} className="bg-white p-5 rounded-[28px] shadow-sm flex items-center justify-between border border-slate-100/50 animate-slideUp group hover:border-indigo-100 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl shadow-sm ${t.type === TransactionType.INCOME ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
+                          <i className={`fas ${CATEGORY_ICONS[t.category] || 'fa-tag'}`}></i>
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-800 text-[15px]">{t.category}</p>
+                          <p className="text-[12px] text-slate-400 font-bold uppercase tracking-tight">{t.note || 'সাধারণ লেনদেন'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <p className={`font-black text-[17px] ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-slate-800'}`}>
+                          {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount}
+                        </p>
+                        <button onClick={() => deleteTransaction(t.id)} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all border-none opacity-0 group-hover:opacity-100">
+                          <i className="fas fa-trash-alt text-[12px]"></i>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-20 text-center flex flex-col items-center gap-4 animate-fadeIn">
+                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 text-3xl shadow-inner">
+                     <i className="fas fa-receipt"></i>
+                   </div>
+                   <p className="text-slate-400 font-black text-[13px] uppercase tracking-widest">এখনো কোনো লেনদেন নেই</p>
+                </div>
+              )}
+            </div>
+
+            {/* BUDGET TRACKER SECTION (Moved Down) */}
             <div className="space-y-4">
               <div className="flex justify-between items-center px-2">
                 <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest">বাজেট ট্র্যাকার</h3>
@@ -231,7 +272,7 @@ const App: React.FC = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                         <div 
                           className={`h-full transition-all duration-700 ease-out rounded-full ${isOver ? 'bg-rose-500' : isNear ? 'bg-amber-500' : 'bg-indigo-500'}`}
                           style={{ width: `${percent}%` }}
@@ -243,46 +284,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* RECENT TRANSACTIONS */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center px-2">
-                <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest">সাম্প্রতিক লেনদেন</h3>
-                <span className="text-[12px] bg-slate-200/50 text-slate-600 px-3 py-1.5 rounded-full font-black uppercase tracking-tighter">এই মাস</span>
-              </div>
-              
-              {transactions.length > 0 ? (
-                <div className="space-y-4">
-                  {transactions.slice(0, 10).map(t => (
-                    <div key={t.id} className="bg-white p-5 rounded-[28px] shadow-sm flex items-center justify-between border border-slate-100/50 animate-slideUp group hover:border-indigo-100 transition-all">
-                      <div className="flex items-center gap-5">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm ${t.type === TransactionType.INCOME ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
-                          <i className={`fas ${CATEGORY_ICONS[t.category] || 'fa-tag'}`}></i>
-                        </div>
-                        <div>
-                          <p className="font-black text-slate-800 text-[16px]">{t.category}</p>
-                          <p className="text-[13px] text-slate-400 font-bold uppercase tracking-tight">{t.note || 'সাধারণ লেনদেন'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-5">
-                        <p className={`font-black text-[18px] ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-slate-800'}`}>
-                          {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount}
-                        </p>
-                        <button onClick={() => deleteTransaction(t.id)} className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all border-none opacity-0 group-hover:opacity-100">
-                          <i className="fas fa-trash-alt text-[13px]"></i>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-24 text-center flex flex-col items-center gap-5 animate-fadeIn">
-                   <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 text-4xl shadow-inner">
-                     <i className="fas fa-receipt"></i>
-                   </div>
-                   <p className="text-slate-400 font-black text-[14px] uppercase tracking-widest">এখনো কোনো লেনদেন নেই</p>
-                </div>
-              )}
-            </div>
           </div>
         ) : activeTab === 'future' ? (
           <div className="space-y-8 animate-fadeIn pb-32">
@@ -308,7 +309,6 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-8 animate-fadeIn pb-32">
-             {/* BILL SPLITTER TOOL */}
              <div className="bg-white p-10 rounded-[45px] border border-slate-100 shadow-sm space-y-8">
                <h3 className="font-black text-slate-800 uppercase text-[14px] tracking-widest"><i className="fas fa-calculator mr-3 text-indigo-600"></i> বিল স্প্লিটার</h3>
                <div className="grid grid-cols-1 gap-6">
@@ -327,7 +327,6 @@ const App: React.FC = () => {
                </div>
              </div>
 
-             {/* SYSTEM CONTROL / DANGER ZONE */}
              <div className="bg-rose-50 p-10 rounded-[45px] border border-rose-100 shadow-sm space-y-6">
                <h3 className="font-black text-rose-800 uppercase text-[14px] tracking-widest"><i className="fas fa-gears mr-3"></i> সিস্টেম কন্ট্রোল</h3>
                <p className="text-[13px] text-rose-600 font-bold leading-relaxed px-2">আপনি কি অ্যাপের সব লেনদেন, বাজেট এবং ব্যক্তিগত তথ্য মুছে ফেলতে চান? এটি পুনরায় ফিরিয়ে আনা সম্ভব হবে না।</p>
@@ -342,40 +341,40 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* FLOATING ACTION BUTTON */}
-      <div className="fixed bottom-28 right-8 z-[100]">
+      {/* FLOATING ACTION BUTTON (Smaller) */}
+      <div className="fixed bottom-24 right-6 z-[100]">
         {showAddMenu && (
-          <div className="flex flex-col gap-4 mb-5 animate-slideUp items-end">
-            <button onClick={() => { setModalType(TransactionType.INCOME); setShowAddMenu(false); }} className="flex items-center gap-4 bg-green-600 text-white px-7 py-4 rounded-[22px] font-black text-[14px] uppercase tracking-widest shadow-2xl active:scale-95 border-none transform transition-transform">
+          <div className="flex flex-col gap-4 mb-4 animate-slideUp items-end">
+            <button onClick={() => { setModalType(TransactionType.INCOME); setShowAddMenu(false); }} className="flex items-center gap-4 bg-green-600 text-white px-6 py-3.5 rounded-[20px] font-black text-[13px] uppercase tracking-widest shadow-2xl active:scale-95 border-none transform transition-transform">
               <i className="fas fa-arrow-up"></i> আয় যোগ
             </button>
-            <button onClick={() => { setModalType(TransactionType.EXPENSE); setShowAddMenu(false); }} className="flex items-center gap-4 bg-rose-600 text-white px-7 py-4 rounded-[22px] font-black text-[14px] uppercase tracking-widest shadow-2xl active:scale-95 border-none transform transition-transform">
+            <button onClick={() => { setModalType(TransactionType.EXPENSE); setShowAddMenu(false); }} className="flex items-center gap-4 bg-rose-600 text-white px-6 py-3.5 rounded-[20px] font-black text-[13px] uppercase tracking-widest shadow-2xl active:scale-95 border-none transform transition-transform">
               <i className="fas fa-arrow-down"></i> ব্যয় যোগ
             </button>
           </div>
         )}
-        <button onClick={() => setShowAddMenu(!showAddMenu)} className={`w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl shadow-[0_20px_40px_-5px_rgba(79,70,229,0.5)] transition-all active:scale-90 border-none ${showAddMenu ? 'bg-slate-800 rotate-45' : 'bg-indigo-600 scale-110'}`}>
+        <button onClick={() => setShowAddMenu(!showAddMenu)} className={`w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl shadow-[0_15px_30px_-5px_rgba(79,70,229,0.5)] transition-all active:scale-90 border-none ${showAddMenu ? 'bg-slate-800 rotate-45' : 'bg-indigo-600 scale-110'}`}>
           <i className="fas fa-plus"></i>
         </button>
       </div>
 
-      {/* BOTTOM NAVIGATION */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-8 py-5 flex justify-between items-center z-[150] shadow-[0_-15px_45px_rgba(0,0,0,0.06)]">
-        <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center py-2 border-none bg-transparent transition-all ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className={`fas fa-house-chimney text-xl mb-2 ${activeTab === 'home' ? 'scale-125' : ''}`}></i>
-          <span className="text-[11px] font-black uppercase tracking-widest">হোম</span>
+      {/* BOTTOM NAVIGATION (Smaller height) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-8 py-3 flex justify-between items-center z-[150] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+        <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center py-1.5 border-none bg-transparent transition-all ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <i className={`fas fa-house-chimney text-[18px] mb-1 ${activeTab === 'home' ? 'scale-110' : ''}`}></i>
+          <span className="text-[10px] font-black uppercase tracking-widest">হোম</span>
         </button>
-        <button onClick={() => setActiveTab('future')} className={`flex-1 flex flex-col items-center py-2 border-none bg-transparent transition-all ${activeTab === 'future' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className={`fas fa-rocket text-xl mb-2 ${activeTab === 'future' ? 'scale-125' : ''}`}></i>
-          <span className="text-[11px] font-black uppercase tracking-widest">এআই</span>
+        <button onClick={() => setActiveTab('future')} className={`flex-1 flex flex-col items-center py-1.5 border-none bg-transparent transition-all ${activeTab === 'future' ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <i className={`fas fa-rocket text-[18px] mb-1 ${activeTab === 'future' ? 'scale-110' : ''}`}></i>
+          <span className="text-[10px] font-black uppercase tracking-widest">এআই</span>
         </button>
-        <button onClick={() => setActiveTab('tools')} className={`flex-1 flex flex-col items-center py-2 border-none bg-transparent transition-all ${activeTab === 'tools' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className={`fas fa-layer-group text-xl mb-2 ${activeTab === 'tools' ? 'scale-125' : ''}`}></i>
-          <span className="text-[11px] font-black uppercase tracking-widest">টুলস</span>
+        <button onClick={() => setActiveTab('tools')} className={`flex-1 flex flex-col items-center py-1.5 border-none bg-transparent transition-all ${activeTab === 'tools' ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <i className={`fas fa-layer-group text-[18px] mb-1 ${activeTab === 'tools' ? 'scale-110' : ''}`}></i>
+          <span className="text-[10px] font-black uppercase tracking-widest">টুলস</span>
         </button>
       </nav>
 
-      {/* TRANSACTION MODAL (SAME AS BEFORE) */}
+      {/* TRANSACTION MODAL */}
       {modalType && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[200] flex items-center justify-center p-8 animate-fadeIn">
           <div className="bg-white w-full max-w-[340px] rounded-[45px] overflow-hidden shadow-2xl border-none flex flex-col animate-scaleIn">
@@ -401,7 +400,7 @@ const App: React.FC = () => {
                     required 
                     placeholder="0" 
                     autoFocus 
-                    className="w-full text-[48px] font-black text-center outline-none text-slate-900 bg-transparent tracking-tighter border-none placeholder:text-slate-100" 
+                    className="w-full text-[40px] font-black text-center outline-none text-slate-900 bg-transparent tracking-tighter border-none placeholder:text-slate-100" 
                   />
                 </div>
                 <div className="h-[3px] w-1/2 mx-auto bg-slate-100 mt-2 relative overflow-hidden rounded-full">
@@ -411,7 +410,7 @@ const App: React.FC = () => {
               
               <div className="space-y-4">
                 <div className="relative">
-                  <select name="category" className="w-full py-5 px-6 bg-slate-50 border border-slate-100 rounded-[28px] font-black text-[16px] text-slate-800 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-100/50 appearance-none text-center shadow-sm transition-all border-none">
+                  <select name="category" className="w-full py-4 px-6 bg-slate-50 border border-slate-100 rounded-[24px] font-black text-[15px] text-slate-800 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-100/50 appearance-none text-center shadow-sm transition-all border-none">
                     {(modalType === TransactionType.INCOME ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300"><i className="fas fa-chevron-down text-[12px]"></i></div>
@@ -420,18 +419,18 @@ const App: React.FC = () => {
                 <input 
                   type="text" 
                   name="note" 
-                  placeholder="নোট (যেমন: বেতন, বাজার...)" 
-                  className="w-full py-5 px-6 bg-slate-50 border border-slate-100 rounded-[28px] font-black text-[16px] text-slate-800 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-100/50 text-center shadow-sm placeholder:text-slate-300 transition-all border-none" 
+                  placeholder="নোট..." 
+                  className="w-full py-4 px-6 bg-slate-50 border border-slate-100 rounded-[24px] font-black text-[15px] text-slate-800 outline-none focus:bg-white focus:ring-4 focus:ring-indigo-100/50 text-center shadow-sm placeholder:text-slate-300 transition-all border-none" 
                 />
               </div>
 
               <div className="flex justify-center gap-2">
                 {[500, 1000, 2000].map(val => (
-                  <button key={val} type="button" onClick={() => handleQuickAdd(val)} className="px-4 py-2.5 bg-slate-50 rounded-full text-[12px] font-black text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all border-none active:scale-90 shadow-sm">+ {val}</button>
+                  <button key={val} type="button" onClick={() => handleQuickAdd(val)} className="px-3.5 py-2 bg-slate-50 rounded-full text-[11px] font-black text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all border-none active:scale-90 shadow-sm">+ {val}</button>
                 ))}
               </div>
               
-              <button type="submit" className={`w-full py-6 mt-3 rounded-[26px] text-white font-black text-[16px] uppercase tracking-[0.25em] shadow-xl transition-all border-none active:scale-95 ${modalType === TransactionType.INCOME ? 'bg-green-600 shadow-green-500/20' : 'bg-rose-600 shadow-rose-500/20'}`}>
+              <button type="submit" className={`w-full py-5 mt-3 rounded-[24px] text-white font-black text-[15px] uppercase tracking-[0.2em] shadow-xl transition-all border-none active:scale-95 ${modalType === TransactionType.INCOME ? 'bg-green-600 shadow-green-500/20' : 'bg-rose-600 shadow-rose-500/20'}`}>
                 নিশ্চিত করুন
               </button>
             </form>
@@ -439,29 +438,29 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* HISTORY & SETTINGS MODALS (SAME AS BEFORE) */}
+      {/* HISTORY & SETTINGS MODALS */}
       {showHistory && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex flex-col">
-          <div className="bg-white flex-1 mt-24 rounded-t-[60px] p-10 overflow-y-auto animate-slideUp shadow-2xl custom-scrollbar border-none">
-             <div className="flex justify-between items-center mb-12">
-                <h2 className="text-[22px] font-black text-slate-900 tracking-widest uppercase">ইতিহাস</h2>
-                <button onClick={() => setShowHistory(false)} className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-900 border-none shadow-sm"><i className="fas fa-times"></i></button>
+          <div className="bg-white flex-1 mt-24 rounded-t-[50px] p-8 overflow-y-auto animate-slideUp shadow-2xl custom-scrollbar border-none">
+             <div className="flex justify-between items-center mb-10">
+                <h2 className="text-[20px] font-black text-slate-900 tracking-widest uppercase">ইতিহাস</h2>
+                <button onClick={() => setShowHistory(false)} className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-900 border-none shadow-sm"><i className="fas fa-times"></i></button>
              </div>
              {archives.length > 0 ? (
-               <div className="space-y-8">
+               <div className="space-y-6">
                  {archives.map(arc => (
-                   <div key={arc.id} className="p-8 bg-slate-50 rounded-[40px] border-none shadow-sm">
-                      <p className="text-[13px] text-indigo-600 uppercase font-black tracking-widest mb-2">{arc.monthName} {arc.year}</p>
-                      <p className="text-slate-900 text-[28px] font-black tracking-tighter">{formatCurrency(arc.totalIncome - arc.totalExpense)}</p>
-                      <div className="flex gap-6 pt-6 mt-6 border-t border-slate-200">
-                        <div className="flex-1"><p className="text-[11px] font-black text-green-600 uppercase mb-1">আয়</p><p className="text-[15px] font-black">৳{arc.totalIncome}</p></div>
-                        <div className="flex-1 text-right"><p className="text-[11px] font-black text-rose-600 uppercase mb-1">ব্যয়</p><p className="text-[15px] font-black">৳{arc.totalExpense}</p></div>
+                   <div key={arc.id} className="p-7 bg-slate-50 rounded-[35px] border-none shadow-sm">
+                      <p className="text-[12px] text-indigo-600 uppercase font-black tracking-widest mb-1.5">{arc.monthName} {arc.year}</p>
+                      <p className="text-slate-900 text-[24px] font-black tracking-tighter">{formatCurrency(arc.totalIncome - arc.totalExpense)}</p>
+                      <div className="flex gap-6 pt-5 mt-5 border-t border-slate-200">
+                        <div className="flex-1"><p className="text-[10px] font-black text-green-600 uppercase mb-0.5">আয়</p><p className="text-[14px] font-black">৳{arc.totalIncome}</p></div>
+                        <div className="flex-1 text-right"><p className="text-[10px] font-black text-rose-600 uppercase mb-0.5">ব্যয়</p><p className="text-[14px] font-black">৳{arc.totalExpense}</p></div>
                       </div>
                    </div>
                  ))}
                </div>
              ) : (
-               <div className="text-center py-24 text-slate-400 font-black uppercase text-[14px] tracking-widest">ইতিহাস খালি</div>
+               <div className="text-center py-20 text-slate-400 font-black uppercase text-[13px] tracking-widest">ইতিহাস খালি</div>
              )}
           </div>
         </div>
@@ -469,22 +468,22 @@ const App: React.FC = () => {
 
       {showBudgetSettings && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex items-end justify-center">
-          <div className="bg-white w-full max-w-md rounded-t-[60px] p-10 animate-slideUp shadow-2xl overflow-y-auto max-h-[85vh] custom-scrollbar border-none">
-             <div className="flex justify-between items-center mb-12">
-                <h2 className="text-[22px] font-black text-slate-900 tracking-widest uppercase">বাজেট লক্ষ্য</h2>
-                <button onClick={() => setShowBudgetSettings(false)} className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-900 border-none shadow-sm"><i className="fas fa-times"></i></button>
+          <div className="bg-white w-full max-w-md rounded-t-[50px] p-8 animate-slideUp shadow-2xl overflow-y-auto max-h-[80vh] custom-scrollbar border-none">
+             <div className="flex justify-between items-center mb-10">
+                <h2 className="text-[20px] font-black text-slate-900 tracking-widest uppercase">বাজেট লক্ষ্য</h2>
+                <button onClick={() => setShowBudgetSettings(false)} className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-900 border-none shadow-sm"><i className="fas fa-times"></i></button>
              </div>
-             <div className="space-y-6 mb-10">
+             <div className="space-y-5 mb-8">
                 {EXPENSE_CATEGORIES.map(cat => (
-                  <div key={cat} className="space-y-3">
-                    <label className="text-[12px] font-black text-slate-500 uppercase ml-3 tracking-widest flex items-center gap-2">
+                  <div key={cat} className="space-y-2.5">
+                    <label className="text-[11px] font-black text-slate-500 uppercase ml-3 tracking-widest flex items-center gap-2">
                        <i className={`fas ${CATEGORY_ICONS[cat]}`}></i> {cat}
                     </label>
-                    <input type="number" value={budgets[cat] || ''} onChange={(e) => setBudgets({ ...budgets, [cat]: parseFloat(e.target.value) || 0 })} placeholder="৳ বাজেট দিন" className="w-full p-5 bg-slate-50 border border-slate-200 rounded-[24px] font-black text-[16px] outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 border-none shadow-inner transition-all" />
+                    <input type="number" value={budgets[cat] || ''} onChange={(e) => setBudgets({ ...budgets, [cat]: parseFloat(e.target.value) || 0 })} placeholder="৳ বাজেট দিন" className="w-full p-4.5 bg-slate-50 border border-slate-200 rounded-[22px] font-black text-[15px] outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 border-none shadow-inner transition-all" />
                   </div>
                 ))}
              </div>
-             <button onClick={() => setShowBudgetSettings(false)} className="w-full py-6 bg-indigo-700 text-white rounded-[26px] font-black uppercase text-[14px] tracking-widest shadow-2xl border-none active:scale-95 transition-all">সংরক্ষণ করুন</button>
+             <button onClick={() => setShowBudgetSettings(false)} className="w-full py-5 bg-indigo-700 text-white rounded-[22px] font-black uppercase text-[13px] tracking-widest shadow-2xl border-none active:scale-95 transition-all">সংরক্ষণ করুন</button>
           </div>
         </div>
       )}
