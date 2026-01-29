@@ -1,34 +1,36 @@
 
 import React from 'react';
 
+export const INCOME_CATEGORIES = ['বেতন', 'ব্যবসা', 'ফ্রিল্যান্সিং', 'উপহার', 'অন্যান্য'];
+export const EXPENSE_CATEGORIES = ['খাবার', 'যাতায়াত', 'ভাড়া', 'বিল', 'কেনাকাটা', 'স্বাস্থ্য', 'অন্যান্য'];
+
+// Default color mapping for categories
 export const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
-  'খাবার': '#f87171',
-  'যাতায়াত': '#fb923c',
-  'ভাড়া': '#fbbf24',
-  'বিল': '#a855f7',
+  'খাবার': '#f43f5e',
+  'যাতায়াত': '#0ea5e9',
+  'ভাড়া': '#8b5cf6',
+  'বিল': '#f59e0b',
   'কেনাকাটা': '#ec4899',
-  'বিনোদন': '#6366f1',
-  'স্বাস্থ্য': '#14b8a6',
-  'অন্যান্য': '#94a3b8',
+  'স্বাস্থ্য': '#10b981',
+  'অন্যান্য': '#64748b',
   'বেতন': '#22c55e',
-  'ফ্রিল্যান্সিং': '#3b82f6',
-  'ব্যবসা': '#06b6d4',
-  'উপহার': '#f59e0b'
+  'ব্যবসা': '#3b82f6',
+  'ফ্রিল্যান্সিং': '#6366f1',
+  'উপহার': '#d946ef'
 };
 
-export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  'খাবার': <i className="fas fa-utensils"></i>,
-  'যাতায়াত': <i className="fas fa-car"></i>,
-  'ভাড়া': <i className="fas fa-home"></i>,
-  'বিল': <i className="fas fa-file-invoice-dollar"></i>,
-  'কেনাকাটা': <i className="fas fa-shopping-bag"></i>,
-  'বিনোদন': <i className="fas fa-gamepad"></i>,
-  'স্বাস্থ্য': <i className="fas fa-heartbeat"></i>,
-  'অন্যান্য': <i className="fas fa-ellipsis-h"></i>,
-  'বেতন': <i className="fas fa-wallet"></i>,
-  'ফ্রিল্যান্সিং': <i className="fas fa-laptop-code"></i>,
-  'ব্যবসা': <i className="fas fa-briefcase"></i>,
-  'উপহার': <i className="fas fa-gift"></i>
+export const CATEGORY_ICONS: Record<string, string> = {
+  'খাবার': 'fa-utensils',
+  'যাতায়াত': 'fa-car',
+  'ভাড়া': 'fa-home',
+  'বিল': 'fa-file-invoice-dollar',
+  'কেনাকাটা': 'fa-shopping-bag',
+  'স্বাস্থ্য': 'fa-heartbeat',
+  'অন্যান্য': 'fa-ellipsis-h',
+  'বেতন': 'fa-wallet',
+  'ব্যবসা': 'fa-briefcase',
+  'ফ্রিল্যান্সিং': 'fa-laptop-code',
+  'উপহার': 'fa-gift'
 };
 
 export const formatCurrency = (amount: number) => {
@@ -38,8 +40,3 @@ export const formatCurrency = (amount: number) => {
     minimumFractionDigits: 0
   }).format(amount);
 };
-
-export const BENGALI_MONTHS = [
-  'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
-];

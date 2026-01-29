@@ -9,8 +9,9 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ settings, onUpdateSettings }) => {
-  const expenseCategories = Object.values(ExpenseCategory);
-  const incomeCategories = Object.values(IncomeCategory);
+  // Fix: Explicitly cast enum values to string arrays to resolve 'unknown' index type errors
+  const expenseCategories = Object.values(ExpenseCategory) as string[];
+  const incomeCategories = Object.values(IncomeCategory) as string[];
   const allCategories = [...incomeCategories, ...expenseCategories];
 
   const handleColorChange = (cat: string, color: string) => {
@@ -57,7 +58,8 @@ const Settings: React.FC<SettingsProps> = ({ settings, onUpdateSettings }) => {
           {expenseCategories.map(cat => (
             <div key={cat} className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                {CATEGORY_ICONS[cat]}
+                {/* Use correct FontAwesome class application */}
+                <i className={`fas ${CATEGORY_ICONS[cat] || 'fa-tag'}`}></i>
                 {cat}
               </label>
               <div className="relative">

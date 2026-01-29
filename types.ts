@@ -4,15 +4,11 @@ export enum TransactionType {
   EXPENSE = 'EXPENSE'
 }
 
-export enum Frequency {
-  NONE = 'NONE',
-  MONTHLY = 'MONTHLY'
-}
-
+// Added missing Enums and Interfaces to resolve import errors in components
 export enum IncomeCategory {
   SALARY = 'বেতন',
-  FREELANCING = 'ফ্রিল্যান্সিং',
   BUSINESS = 'ব্যবসা',
+  FREELANCING = 'ফ্রিল্যান্সিং',
   GIFT = 'উপহার',
   OTHER = 'অন্যান্য'
 }
@@ -23,9 +19,18 @@ export enum ExpenseCategory {
   RENT = 'ভাড়া',
   BILLS = 'বিল',
   SHOPPING = 'কেনাকাটা',
-  ENTERTAINMENT = 'বিনোদন',
   HEALTH = 'স্বাস্থ্য',
   OTHER = 'অন্যান্য'
+}
+
+export enum Frequency {
+  NONE = 'NONE',
+  MONTHLY = 'MONTHLY'
+}
+
+export interface UserSettings {
+  budgets: Record<string, number>;
+  categoryColors: Record<string, string>;
 }
 
 export interface Transaction {
@@ -33,28 +38,33 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   category: string;
-  date: string; // ISO string
+  date: string;
   note: string;
   isRecurring?: boolean;
   frequency?: Frequency;
 }
 
+export interface MonthlyArchive {
+  id: string;
+  monthName: string;
+  year: number;
+  totalIncome: number;
+  totalExpense: number;
+  transactions: Transaction[];
+}
+
 export interface FinancialSummary {
   totalIncome: number;
   totalExpenses: number;
+  balance: number;
   savings: number;
   previousMonthSavings: number;
   categoryBreakdown: Record<string, number>;
-  monthlyHistory: Array<{ month: string; income: number; expense: number }>;
+  monthlyHistory: { month: string; income: number; expense: number }[];
 }
 
 export interface Insight {
   title: string;
   description: string;
   type: 'success' | 'warning' | 'info';
-}
-
-export interface UserSettings {
-  categoryColors: Record<string, string>;
-  budgets: Record<string, number>;
 }
