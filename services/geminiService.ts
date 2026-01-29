@@ -9,42 +9,42 @@ export const getFinancialInsights = async (
   // Ensure the API key is present
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    console.warn("API Key is missing. Falling back to default message.");
+    console.warn("API Key is missing.");
     return [{
       title: "এআই সিস্টেম আপডেট",
-      description: "এআই পরামর্শ পেতে সিস্টেম কনফিগারেশন চেক করুন।",
+      description: "এআই পরামর্শ পেতে আপনার সিস্টেম সেটিংস থেকে এপিআই কী চেক করুন।",
       type: "info"
     }];
   }
 
+  // Create instance right before use
   const ai = new GoogleGenAI({ apiKey });
 
-  const recentTransactions = transactions.slice(0, 15).map(t => ({
+  const recentTransactions = transactions.slice(0, 10).map(t => ({
     type: t.type,
     amount: t.amount,
     category: t.category,
-    date: t.date.split('T')[0]
+    note: t.note
   }));
 
   const prompt = `
-    তুমি একজন দক্ষ ব্যক্তিগত আর্থিক উপদেষ্টা। নিচের আর্থিক সারাংশ বিশ্লেষণ করো এবং ৩টি গুরুত্বপূর্ণ পরামর্শ দাও।
+    তুমি একজন দক্ষ ব্যক্তিগত আর্থিক উপদেষ্টা। নিচের আর্থিক ডেটা বিশ্লেষণ করো এবং ৩টি গুরুত্বপূর্ণ ও বাস্তবসম্মত পরামর্শ দাও।
     
-    চলতি মাসের সারাংশ:
+    চলতি মাসের বর্তমান অবস্থা:
     - বর্তমান ব্যালেন্স: ৳${summary.balance}
     - মোট আয়: ৳${summary.totalIncome}
     - মোট ব্যয়: ৳${summary.totalExpenses}
-    - গত মাসের সঞ্চয়: ৳${summary.previousMonthSavings}
     
     ক্যাটাগরি অনুযায়ী খরচ:
     ${JSON.stringify(summary.categoryBreakdown)}
 
-    সাম্প্রতিক লেনদেন:
+    সাম্প্রতিক কিছু লেনদেন:
     ${JSON.stringify(recentTransactions)}
 
     নিয়ম:
     ১. উত্তর অবশ্যই বাংলা ভাষায় হতে হবে।
-    ২. পরামর্শগুলো বাস্তবসম্মত এবং সহজ হতে হবে।
-    ৩. উত্তরটি JSON ফরম্যাটে দাও যেখানে title, description এবং type ('success', 'warning', 'info') থাকবে।
+    ২. পরামর্শগুলো সহজ ভাষায় ও অ্যাকশনেবল হতে হবে।
+    ৩. উত্তরটি JSON ফরম্যাটে দাও যেখানে array of objects থাকবে। প্রতিটি অবজেক্টে title, description এবং type ('success' অথবা 'info') প্রপার্টি থাকবে।
   `;
 
   try {
@@ -58,18 +58,9 @@ export const getFinancialInsights = async (
           items: {
             type: Type.OBJECT,
             properties: {
-              title: { 
-                type: Type.STRING,
-                description: 'আর্থিক পরামর্শের শিরোনাম।'
-              },
-              description: { 
-                type: Type.STRING,
-                description: 'বিস্তারিত ব্যাখ্যা।'
-              },
-              type: { 
-                type: Type.STRING,
-                description: "'success', 'warning', অথবা 'info'"
-              },
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              type: { type: Type.STRING },
             },
             required: ["title", "description", "type"],
           },
@@ -77,29 +68,16 @@ export const getFinancialInsights = async (
       },
     });
 
-    const text = response.text;
-    if (!text) return [];
-
-    try {
-      return JSON.parse(text);
-    } catch (parseError) {
-      console.error("Failed to parse Gemini response:", text);
-      return [
-        {
-          title: "বিশ্লেষণ সম্পন্ন",
-          description: "আপনার খরচগুলো নিয়ন্ত্রিত আছে। অপ্রয়োজনীয় খরচ এড়িয়ে চলার চেষ্টা করুন।",
-          type: "info"
-        }
-      ];
-    }
+    const result = response.text;
+    if (!result) return [];
+    
+    return JSON.parse(result.trim());
   } catch (error) {
-    console.error("Error fetching financial insights:", error);
-    return [
-      {
-        title: "কোচ প্রস্তুত হচ্ছে",
-        description: "আপনার লেনদেনগুলো আরও বিশ্লেষণ করা হচ্ছে। কিছু সময় পর আবার চেষ্টা করুন।",
-        type: "info"
-      }
-    ];
+    console.error("Gemini API Error:", error);
+    return [{
+      title: "বিশ্লেষণ সমস্যা",
+      description: "সার্ভারের সাথে সংযোগ করা যাচ্ছে না। দয়া করে ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন।",
+      type: "info"
+    }];
   }
 };
