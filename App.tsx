@@ -39,8 +39,12 @@ const App: React.FC = () => {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showBudgetSettings, setShowBudgetSettings] = useState(false);
+  
+  // Tools state
   const [splitAmount, setSplitAmount] = useState('');
   const [splitPeople, setSplitPeople] = useState('2');
+  const [goalAmount, setGoalAmount] = useState('');
+  const [goalMonths, setGoalMonths] = useState('12');
 
   useEffect(() => {
     localStorage.setItem('spark_tx', JSON.stringify(transactions));
@@ -58,6 +62,12 @@ const App: React.FC = () => {
     });
     return { income, expense, balance: income - expense, breakdown };
   }, [transactions]);
+
+  const financialHealthScore = useMemo(() => {
+    if (summary.income === 0) return 0;
+    const savingsRate = ((summary.income - summary.expense) / summary.income) * 100;
+    return Math.min(Math.max(Math.round(savingsRate + 50), 0), 100);
+  }, [summary]);
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     const scrollPos = e.currentTarget.scrollTop;
@@ -120,10 +130,19 @@ const App: React.FC = () => {
   };
 
   const deleteAllData = () => {
-    if (window.confirm('সব ডেটা মুছে ফেলতে চান?')) {
+    if (window.confirm('সব ডেটা মুছে ফেলতে চান? এটি আর ফিরে পাওয়া যাবে না।')) {
       setTransactions([]);
       setArchives([]);
       setInsights([]);
+      setBudgets({
+        'খাবার': 5000,
+        'যাতায়াত': 2000,
+        'ভাড়া': 10000,
+        'বিল': 3000,
+        'কেনাকাটা': 4000,
+        'স্বাস্থ্য': 2000,
+        'অন্যান্য': 2000
+      });
       localStorage.clear();
       setActiveTab('home');
     }
@@ -140,8 +159,8 @@ const App: React.FC = () => {
   return (
     <div className="max-w-md mx-auto h-screen bg-slate-50 shadow-2xl flex flex-col font-sans relative overflow-hidden text-slate-900 border-x border-slate-100">
       
-      {/* HEADER - STICKY TO PREVENT BUMPING */}
-      <header className={`header-container bg-gradient-to-br from-indigo-600 to-indigo-800 text-white relative z-[60] shrink-0 ${isShrunk ? 'p-4 rounded-b-[20px] shadow-lg' : 'p-8 rounded-b-[40px] shadow-xl'}`}>
+      {/* HEADER */}
+      <header className={`header-container bg-gradient-to-br from-indigo-600 to-indigo-800 text-white relative z-[60] shrink-0 transition-all duration-300 ${isShrunk ? 'p-4 rounded-b-[20px] shadow-lg' : 'p-8 rounded-b-[40px] shadow-xl'}`}>
         <div className="flex justify-between items-center mb-4 transition-all">
           <div className="flex items-center gap-3">
              <div className={`bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center relative overflow-hidden border border-white/20 transition-all ${isShrunk ? 'w-10 h-10' : 'w-14 h-14'}`}>
@@ -162,14 +181,14 @@ const App: React.FC = () => {
              {isShrunk && <h1 className="font-black text-white text-[18px] animate-fadeIn">স্পার্ক</h1>}
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowBudgetSettings(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center transition-all hover:bg-white/20"><i className="fas fa-bullseye text-[13px]"></i></button>
-            <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center transition-all hover:bg-white/20"><i className="fas fa-history text-[13px]"></i></button>
+            <button onClick={() => setShowBudgetSettings(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center transition-all hover:bg-white/20 border-none"><i className="fas fa-bullseye text-[13px]"></i></button>
+            <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center transition-all hover:bg-white/20 border-none"><i className="fas fa-history text-[13px]"></i></button>
           </div>
         </div>
         
         <div className="text-center transition-all">
             <p className={`text-indigo-100 font-bold uppercase tracking-widest ${isShrunk ? 'hidden' : 'text-[13px] mb-2 animate-fadeIn'}`}>বর্তমান ব্যালেন্স</p>
-            <h2 className={`font-black tracking-tighter text-white ${isShrunk ? 'text-[28px]' : 'text-[44px]'}`}>{formatCurrency(summary.balance)}</h2>
+            <h2 className={`font-black tracking-tighter text-white transition-all ${isShrunk ? 'text-[28px]' : 'text-[44px]'}`}>{formatCurrency(summary.balance)}</h2>
             
             {!isShrunk && (
               <div className="mt-6 grid grid-cols-2 gap-4 animate-fadeIn">
@@ -189,7 +208,7 @@ const App: React.FC = () => {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 overflow-y-auto custom-scrollbar px-6 py-4 scroll-smooth" onScroll={handleScroll}>
         {activeTab === 'home' ? (
-          <div className="space-y-8 animate-fadeIn pb-32">
+          <div className="space-y-8 animate-fadeIn pb-32 pt-2">
             
             {/* RECENT TRANSACTIONS */}
             <div className="space-y-4">
@@ -215,7 +234,7 @@ const App: React.FC = () => {
                         <p className={`font-black text-[15px] ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-slate-800'}`}>
                           {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount}
                         </p>
-                        <button onClick={() => deleteTransaction(t.id)} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => deleteTransaction(t.id)} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 hover:text-rose-500 border-none opacity-0 group-hover:opacity-100 transition-opacity">
                           <i className="fas fa-trash-alt text-[11px]"></i>
                         </button>
                       </div>
@@ -223,7 +242,7 @@ const App: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="py-16 text-center">
+                <div className="py-16 text-center border-2 border-dashed border-slate-200 rounded-[30px]">
                    <p className="text-slate-400 font-black text-[12px] uppercase tracking-widest">কোনো লেনদেন নেই</p>
                 </div>
               )}
@@ -233,7 +252,7 @@ const App: React.FC = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center px-2">
                 <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest">বাজেট ট্র্যাকার</h3>
-                <button onClick={() => setShowBudgetSettings(true)} className="text-[11px] font-black text-indigo-600 uppercase tracking-tighter">বাজেট সেট</button>
+                <button onClick={() => setShowBudgetSettings(true)} className="text-[11px] font-black text-indigo-600 uppercase border-none bg-transparent">বাজেট সেট</button>
               </div>
               
               <div className="space-y-3">
@@ -243,7 +262,7 @@ const App: React.FC = () => {
                   if (budget === 0 && spent === 0) return null;
                   const percent = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
                   return (
-                    <div key={cat} className="bg-white p-4 rounded-[24px] shadow-sm border border-slate-100">
+                    <div key={cat} className="bg-white p-4 rounded-[24px] shadow-sm border border-slate-100 transition-all hover:border-indigo-100">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-3">
                           <i className={`fas ${CATEGORY_ICONS[cat]} text-slate-400 text-[14px]`}></i>
@@ -262,13 +281,14 @@ const App: React.FC = () => {
 
           </div>
         ) : activeTab === 'future' ? (
-          <div className="space-y-8 animate-fadeIn pb-32">
+          <div className="space-y-8 animate-fadeIn pb-32 pt-2">
              <div className="p-10 bg-slate-900 rounded-[40px] text-white relative overflow-hidden shadow-2xl">
                <h3 className="text-[24px] font-black mb-1">এআই পরামর্শ</h3>
                <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest mb-10">স্মার্ট কোচ</p>
-               <button onClick={fetchAIAdvice} disabled={loadingAI} className="w-full py-5 bg-indigo-600 text-white rounded-[24px] font-black uppercase text-[12px] tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">
+               <button onClick={fetchAIAdvice} disabled={loadingAI} className="w-full py-5 bg-indigo-600 text-white rounded-[24px] font-black uppercase text-[12px] tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95 border-none">
                  {loadingAI ? <><i className="fas fa-spinner animate-spin mr-2"></i> লোডিং...</> : <><i className="fas fa-wand-magic-sparkles mr-2"></i> পরামর্শ নিন</>}
                </button>
+               <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
              </div>
              {insights.map((insight, idx) => (
                <div key={idx} className={`p-6 rounded-[30px] border flex gap-4 animate-slideUp shadow-sm ${insight.type === 'success' ? 'bg-green-50/50 border-green-100' : 'bg-blue-50/50 border-blue-100'}`}>
@@ -278,56 +298,129 @@ const App: React.FC = () => {
                  </div>
                </div>
              ))}
+             {insights.length === 0 && !loadingAI && (
+               <div className="py-20 text-center text-slate-400 font-bold uppercase text-[12px]">এআই কোচ আপনার ডেটা বিশ্লেষণের জন্য তৈরি।</div>
+             )}
           </div>
         ) : (
-          <div className="space-y-8 animate-fadeIn pb-32">
-             <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
-               <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest">বিল স্প্লিটার</h3>
-               <div className="space-y-4">
-                 <input type="number" value={splitAmount} onChange={(e) => setSplitAmount(e.target.value)} placeholder="৳ মোট টাকা" className="w-full p-5 bg-slate-50 rounded-[20px] font-black text-slate-900 outline-none border-none shadow-inner" />
-                 <input type="number" value={splitPeople} onChange={(e) => setSplitPeople(e.target.value)} placeholder="মানুষের সংখ্যা" className="w-full p-5 bg-slate-50 rounded-[20px] font-black text-slate-900 outline-none border-none shadow-inner" />
+          <div className="space-y-8 animate-fadeIn pb-32 pt-2">
+             
+             {/* FINANCIAL HEALTH CHECK (NEW) */}
+             <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-4">
+               <div className="flex justify-between items-center">
+                 <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest">আর্থিক স্বাস্থ্য</h3>
+                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${financialHealthScore > 70 ? 'bg-green-100 text-green-700' : financialHealthScore > 40 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                   {financialHealthScore > 70 ? 'চমৎকার' : financialHealthScore > 40 ? 'মোটামুটি' : 'উদ্বেগজনক'}
+                 </span>
                </div>
-               <div className="p-8 bg-indigo-600 rounded-[30px] text-center shadow-lg">
+               <div className="flex items-center gap-6">
+                 <div className="relative w-20 h-20 shrink-0">
+                    <svg className="w-full h-full" viewBox="0 0 36 36">
+                      <path className="text-slate-100" strokeDasharray="100, 100" strokeWidth="3" fill="none" stroke="currentColor" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path className="text-indigo-600" strokeDasharray={`${financialHealthScore}, 100`} strokeWidth="3" strokeLinecap="round" fill="none" stroke="currentColor" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center font-black text-lg text-slate-800">{financialHealthScore}%</div>
+                 </div>
+                 <p className="text-[12px] font-bold text-slate-500 leading-relaxed">আপনার সঞ্চয়ের হার এবং ব্যয়ের অভ্যাসের ওপর ভিত্তি করে এই স্কোরটি তৈরি করা হয়েছে। স্কোর বাড়ানোর জন্য সঞ্চয় বৃদ্ধি করুন।</p>
+               </div>
+             </div>
+
+             {/* BILL SPLITTER */}
+             <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+               <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest"><i className="fas fa-calculator mr-2 text-indigo-500"></i> বিল স্প্লিটার</h3>
+               <div className="space-y-4">
+                 <div className="relative">
+                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300">৳</span>
+                   <input type="number" value={splitAmount} onChange={(e) => setSplitAmount(e.target.value)} placeholder="মোট বিল" className="w-full p-5 pl-10 bg-slate-50 rounded-[22px] font-black text-slate-900 outline-none border-none shadow-inner" />
+                 </div>
+                 <div className="relative">
+                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"><i className="fas fa-users"></i></span>
+                   <input type="number" value={splitPeople} onChange={(e) => setSplitPeople(e.target.value)} placeholder="মানুষের সংখ্যা" className="w-full p-5 pl-10 bg-slate-50 rounded-[22px] font-black text-slate-900 outline-none border-none shadow-inner" />
+                 </div>
+               </div>
+               <div className="p-8 bg-indigo-600 rounded-[30px] text-center shadow-lg transform transition-transform hover:scale-[1.02]">
                  <p className="text-[11px] font-bold text-indigo-100 uppercase mb-2">মাথা পিছু খরচ</p>
                  <p className="text-[32px] font-black text-white tracking-tighter">৳ {splitAmount && splitPeople ? (parseFloat(splitAmount) / parseInt(splitPeople)).toFixed(0) : '০'}</p>
                </div>
              </div>
-             <div className="bg-rose-50 p-8 rounded-[40px] border border-rose-100 shadow-sm">
-               <button onClick={deleteAllData} className="w-full py-5 bg-rose-600 text-white rounded-[22px] font-black uppercase text-[12px] tracking-widest active:scale-95 shadow-lg shadow-rose-200"><i className="fas fa-trash-can mr-2"></i> সব ডেটা মুছুন</button>
+
+             {/* SAVINGS GOAL CALCULATOR (NEW) */}
+             <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+               <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest"><i className="fas fa-bullseye mr-2 text-green-500"></i> লক্ষ্য ক্যালকুলেটর</h3>
+               <div className="space-y-4">
+                 <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300">৳</span>
+                    <input type="number" value={goalAmount} onChange={(e) => setGoalAmount(e.target.value)} placeholder="লক্ষ্য পরিমাণ (যেমনঃ ৫০,০০০)" className="w-full p-5 pl-10 bg-slate-50 rounded-[22px] font-black text-slate-900 outline-none border-none shadow-inner" />
+                 </div>
+                 <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"><i className="fas fa-calendar-alt"></i></span>
+                    <input type="number" value={goalMonths} onChange={(e) => setGoalMonths(e.target.value)} placeholder="সময়কাল (মাস)" className="w-full p-5 pl-10 bg-slate-50 rounded-[22px] font-black text-slate-900 outline-none border-none shadow-inner" />
+                 </div>
+               </div>
+               <div className="p-8 bg-green-600 rounded-[30px] text-center shadow-lg">
+                 <p className="text-[11px] font-bold text-green-100 uppercase mb-2">মাসিক সঞ্চয় লক্ষ্য</p>
+                 <p className="text-[32px] font-black text-white tracking-tighter">৳ {goalAmount && goalMonths ? (parseFloat(goalAmount) / parseInt(goalMonths)).toFixed(0) : '০'}</p>
+               </div>
              </div>
+
+             {/* QUICK TIPS (NEW) */}
+             <div className="bg-indigo-50 p-8 rounded-[40px] border border-indigo-100 space-y-4">
+               <h3 className="font-black text-indigo-800 uppercase text-[12px] tracking-widest"><i className="fas fa-lightbulb mr-2"></i> প্রো টিপস</h3>
+               <ul className="space-y-3">
+                 <li className="flex gap-3 text-[13px] font-bold text-slate-600">
+                    <span className="text-indigo-500">•</span> ৫-৩০-২০ নিয়ম মেনে চলুন (৫০% প্রয়োজন, ৩০% শখ, ২০% সঞ্চয়)।
+                 </li>
+                 <li className="flex gap-3 text-[13px] font-bold text-slate-600">
+                    <span className="text-indigo-500">•</span> প্রতি মাসে আগে সঞ্চয় করুন, তারপর খরচ করুন।
+                 </li>
+                 <li className="flex gap-3 text-[13px] font-bold text-slate-600">
+                    <span className="text-indigo-500">•</span> ছোট ছোট অপ্রয়োজনীয় খরচগুলো ট্র্যাক করার চেষ্টা করুন।
+                 </li>
+               </ul>
+             </div>
+
+             {/* SYSTEM CONTROL */}
+             <div className="bg-rose-50 p-8 rounded-[40px] border border-rose-100 shadow-sm">
+               <button onClick={deleteAllData} className="w-full py-5 bg-rose-600 text-white rounded-[22px] font-black uppercase text-[12px] tracking-widest active:scale-95 shadow-lg shadow-rose-200 border-none transition-all hover:bg-rose-700">
+                 <i className="fas fa-trash-can mr-2"></i> সব ডেটা মুছুন
+               </button>
+               <p className="text-[10px] text-rose-400 font-bold text-center mt-4 uppercase tracking-tighter">সতর্কতা: এটি করলে আপনার সব সেভ করা ডেটা মুছে যাবে।</p>
+             </div>
+
+             <div className="h-10"></div> {/* Extra space for better scrolling */}
           </div>
         )}
       </main>
 
-      {/* FLOATING ACTION BUTTON - SMALLER */}
+      {/* FLOATING ACTION BUTTON */}
       <div className="fixed bottom-20 right-6 z-[100]">
         {showAddMenu && (
           <div className="flex flex-col gap-3 mb-4 animate-slideUp items-end">
-            <button onClick={() => { setModalType(TransactionType.INCOME); setShowAddMenu(false); }} className="bg-green-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none">
+            <button onClick={() => { setModalType(TransactionType.INCOME); setShowAddMenu(false); }} className="bg-green-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none active:scale-95">
               <i className="fas fa-arrow-up mr-2"></i> আয়
             </button>
-            <button onClick={() => { setModalType(TransactionType.EXPENSE); setShowAddMenu(false); }} className="bg-rose-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none">
+            <button onClick={() => { setModalType(TransactionType.EXPENSE); setShowAddMenu(false); }} className="bg-rose-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none active:scale-95">
               <i className="fas fa-arrow-down mr-2"></i> ব্যয়
             </button>
           </div>
         )}
-        <button onClick={() => setShowAddMenu(!showAddMenu)} className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl shadow-lg transition-all active:scale-90 border-none ${showAddMenu ? 'bg-slate-800 rotate-45' : 'bg-indigo-600'}`}>
+        <button onClick={() => setShowAddMenu(!showAddMenu)} className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl shadow-lg transition-all active:scale-90 border-none ${showAddMenu ? 'bg-slate-800 rotate-45' : 'bg-indigo-600 shadow-[0_10px_20px_rgba(79,70,229,0.3)]'}`}>
           <i className="fas fa-plus"></i>
         </button>
       </div>
 
-      {/* BOTTOM NAVIGATION - COMPACT */}
+      {/* BOTTOM NAVIGATION */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 px-8 py-2.5 flex justify-between items-center z-[150] shadow-2xl">
-        <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center border-none bg-transparent ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className="fas fa-house-chimney text-[18px]"></i>
+        <button onClick={() => setActiveTab('home')} className={`flex-1 flex flex-col items-center border-none bg-transparent transition-all ${activeTab === 'home' ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <i className={`fas fa-house-chimney text-[18px] transition-transform ${activeTab === 'home' ? 'scale-110' : ''}`}></i>
           <span className="text-[9px] font-black uppercase mt-1">হোম</span>
         </button>
-        <button onClick={() => setActiveTab('future')} className={`flex-1 flex flex-col items-center border-none bg-transparent ${activeTab === 'future' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className="fas fa-rocket text-[18px]"></i>
+        <button onClick={() => setActiveTab('future')} className={`flex-1 flex flex-col items-center border-none bg-transparent transition-all ${activeTab === 'future' ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <i className={`fas fa-rocket text-[18px] transition-transform ${activeTab === 'future' ? 'scale-110' : ''}`}></i>
           <span className="text-[9px] font-black uppercase mt-1">এআই</span>
         </button>
-        <button onClick={() => setActiveTab('tools')} className={`flex-1 flex flex-col items-center border-none bg-transparent ${activeTab === 'tools' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className="fas fa-layer-group text-[18px]"></i>
+        <button onClick={() => setActiveTab('tools')} className={`flex-1 flex flex-col items-center border-none bg-transparent transition-all ${activeTab === 'tools' ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <i className={`fas fa-layer-group text-[18px] transition-transform ${activeTab === 'tools' ? 'scale-110' : ''}`}></i>
           <span className="text-[9px] font-black uppercase mt-1">টুলস</span>
         </button>
       </nav>
@@ -338,7 +431,7 @@ const App: React.FC = () => {
           <div className="bg-white w-full max-w-[340px] rounded-[35px] overflow-hidden shadow-2xl border-none flex flex-col animate-slideUp">
             <div className="flex justify-between items-center px-8 pt-8">
               <h2 className="text-[18px] font-black text-slate-800">{modalType === TransactionType.INCOME ? 'আয় যোগ' : 'ব্যয় যোগ'}</h2>
-              <button onClick={() => setModalType(null)} className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 border-none"><i className="fas fa-times text-[10px]"></i></button>
+              <button onClick={() => setModalType(null)} className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 border-none transition-hover hover:bg-slate-100"><i className="fas fa-times text-[10px]"></i></button>
             </div>
             <form onSubmit={addTransaction} className="px-8 pb-10 pt-4 space-y-6">
               <div className="text-center relative">
@@ -353,10 +446,10 @@ const App: React.FC = () => {
               </div>
               <div className="flex justify-center gap-2">
                 {[500, 1000, 2000].map(val => (
-                  <button key={val} type="button" onClick={() => handleQuickAdd(val)} className="px-3 py-1.5 bg-slate-50 rounded-full text-[10px] font-black text-slate-500 border-none active:scale-90 shadow-sm">+ {val}</button>
+                  <button key={val} type="button" onClick={() => handleQuickAdd(val)} className="px-3 py-1.5 bg-slate-50 rounded-full text-[10px] font-black text-slate-500 border-none active:scale-90 shadow-sm transition-all hover:bg-indigo-50">+ {val}</button>
                 ))}
               </div>
-              <button type="submit" className={`w-full py-5 rounded-[22px] text-white font-black uppercase text-[13px] tracking-widest shadow-xl border-none active:scale-95 ${modalType === TransactionType.INCOME ? 'bg-green-600 shadow-green-500/20' : 'bg-rose-600 shadow-rose-500/20'}`}>নিশ্চিত করুন</button>
+              <button type="submit" className={`w-full py-5 rounded-[22px] text-white font-black uppercase text-[13px] tracking-widest shadow-xl border-none active:scale-95 transition-all ${modalType === TransactionType.INCOME ? 'bg-green-600 shadow-green-500/20' : 'bg-rose-600 shadow-rose-500/20'}`}>নিশ্চিত করুন</button>
             </form>
           </div>
         </div>
@@ -365,20 +458,23 @@ const App: React.FC = () => {
       {/* BUDGET SETTINGS MODAL */}
       {showBudgetSettings && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex items-end justify-center">
-          <div className="bg-white w-full max-w-md rounded-t-[40px] p-8 animate-slideUp overflow-y-auto max-h-[80vh] custom-scrollbar border-none">
+          <div className="bg-white w-full max-w-md rounded-t-[40px] p-8 animate-slideUp overflow-y-auto max-h-[85vh] custom-scrollbar border-none">
              <div className="flex justify-between items-center mb-8">
                 <h2 className="text-[18px] font-black text-slate-900 uppercase">বাজেট লক্ষ্য</h2>
-                <button onClick={() => setShowBudgetSettings(false)} className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center border-none"><i className="fas fa-times"></i></button>
+                <button onClick={() => setShowBudgetSettings(false)} className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center border-none transition-hover hover:bg-slate-200"><i className="fas fa-times"></i></button>
              </div>
              <div className="space-y-6 mb-8">
                 {EXPENSE_CATEGORIES.map(cat => (
                   <div key={cat} className="flex flex-col gap-2">
                     <label className="text-[11px] font-black text-slate-500 uppercase flex items-center gap-3"><i className={`fas ${CATEGORY_ICONS[cat]}`}></i> {cat}</label>
-                    <input type="number" value={budgets[cat] || ''} onChange={(e) => setBudgets({ ...budgets, [cat]: parseFloat(e.target.value) || 0 })} placeholder="৳ মাসিক বাজেট" className="w-full p-4 bg-slate-50 rounded-[18px] font-black outline-none border-none shadow-inner" />
+                    <div className="relative">
+                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300">৳</span>
+                       <input type="number" value={budgets[cat] || ''} onChange={(e) => setBudgets({ ...budgets, [cat]: parseFloat(e.target.value) || 0 })} placeholder="মাসিক বাজেট" className="w-full p-4 pl-10 bg-slate-50 rounded-[18px] font-black outline-none border-none shadow-inner" />
+                    </div>
                   </div>
                 ))}
              </div>
-             <button onClick={() => setShowBudgetSettings(false)} className="w-full py-5 bg-indigo-600 text-white rounded-[22px] font-black uppercase text-[12px] tracking-widest shadow-xl border-none mb-4">সংরক্ষণ করুন</button>
+             <button onClick={() => setShowBudgetSettings(false)} className="w-full py-5 bg-indigo-600 text-white rounded-[22px] font-black uppercase text-[12px] tracking-widest shadow-xl border-none mb-4 transition-all hover:bg-indigo-700">সংরক্ষণ করুন</button>
           </div>
         </div>
       )}
@@ -386,15 +482,15 @@ const App: React.FC = () => {
       {/* HISTORY MODAL */}
       {showHistory && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex flex-col">
-          <div className="bg-white flex-1 mt-20 rounded-t-[40px] p-8 overflow-y-auto animate-slideUp border-none">
+          <div className="bg-white flex-1 mt-20 rounded-t-[40px] p-8 overflow-y-auto animate-slideUp border-none custom-scrollbar">
              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-[18px] font-black text-slate-900 uppercase">ইতিহাস</h2>
-                <button onClick={() => setShowHistory(false)} className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center border-none"><i className="fas fa-times"></i></button>
+                <h2 className="text-[18px] font-black text-slate-900 uppercase tracking-widest">ইতিহাস</h2>
+                <button onClick={() => setShowHistory(false)} className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center border-none transition-hover hover:bg-slate-200"><i className="fas fa-times"></i></button>
              </div>
              {archives.length > 0 ? (
                <div className="space-y-5">
                  {archives.map(arc => (
-                   <div key={arc.id} className="p-6 bg-slate-50 rounded-[28px] shadow-sm">
+                   <div key={arc.id} className="p-6 bg-slate-50 rounded-[28px] shadow-sm border border-slate-100">
                       <p className="text-[11px] text-indigo-600 uppercase font-black mb-1">{arc.monthName} {arc.year}</p>
                       <p className="text-slate-900 text-[20px] font-black">{formatCurrency(arc.totalIncome - arc.totalExpense)}</p>
                       <div className="flex gap-4 mt-4 pt-4 border-t border-slate-200 text-[12px] font-black">
@@ -405,7 +501,10 @@ const App: React.FC = () => {
                  ))}
                </div>
              ) : (
-               <div className="text-center py-20 text-slate-400 font-black uppercase text-[12px]">ইতিহাস খালি</div>
+               <div className="text-center py-24 flex flex-col items-center gap-4 opacity-40">
+                  <i className="fas fa-box-open text-4xl"></i>
+                  <p className="font-black uppercase text-[12px] tracking-widest">ইতিহাস খালি</p>
+               </div>
              )}
           </div>
         </div>
