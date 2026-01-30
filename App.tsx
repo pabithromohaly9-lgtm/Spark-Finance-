@@ -10,9 +10,17 @@ const App: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(() => localStorage.getItem('spark_profile'));
   const amountInputRef = useRef<HTMLInputElement>(null);
   
-  // Voice Recognition States
+  // Voice & Quick Command States
   const [isListening, setIsListening] = useState(false);
   const [voiceFeedback, setVoiceFeedback] = useState<string | null>(null);
+  const [showQuickInput, setShowQuickInput] = useState(false);
+  const [quickInputVal, setQuickInputVal] = useState('');
+
+  // Fixed: Added missing state variables for Bill Splitter and Savings Goal Calculator
+  const [splitAmount, setSplitAmount] = useState('');
+  const [splitPeople, setSplitPeople] = useState('');
+  const [goalAmount, setGoalAmount] = useState('');
+  const [goalMonths, setGoalMonths] = useState('');
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('spark_tx');
@@ -43,12 +51,6 @@ const App: React.FC = () => {
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showBudgetSettings, setShowBudgetSettings] = useState(false);
-  
-  // Tools state
-  const [splitAmount, setSplitAmount] = useState('');
-  const [splitPeople, setSplitPeople] = useState('2');
-  const [goalAmount, setGoalAmount] = useState('');
-  const [goalMonths, setGoalMonths] = useState('12');
 
   useEffect(() => {
     localStorage.setItem('spark_tx', JSON.stringify(transactions));
@@ -112,11 +114,18 @@ const App: React.FC = () => {
     return Math.min(Math.max(score, 0), 100);
   }, [summary, analyticsData]);
 
-  // VOICE RECOGNITION LOGIC
+  // HELPER: Bengali Digits to English
+  const bengaliToEnglishDigits = (str: string) => {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return str.replace(/[০-৯]/g, (w) => bengaliDigits.indexOf(w).toString());
+  };
+
+  // VOICE & QUICK COMMAND LOGIC
   const startVoiceInput = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("দুঃখিত, আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই।");
+      setVoiceFeedback("ভয়েস সাপোর্ট নেই, সরাসরি টাইপ করুন।");
+      setShowQuickInput(true);
       return;
     }
 
@@ -127,17 +136,22 @@ const App: React.FC = () => {
 
     recognition.onstart = () => {
       setIsListening(true);
-      setVoiceFeedback("শুনছি... বলুন (যেমন: ১০০ টাকা খাবার খরচ)");
+      setVoiceFeedback("শুনছি... বলুন (যেমন: ১০০ টাকা নাস্তা)");
     };
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript.toLowerCase();
-      processVoiceCommand(transcript);
+      processCommand(transcript);
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (event: any) => {
       setIsListening(false);
-      setVoiceFeedback("বুঝতে পারিনি, আবার চেষ্টা করুন।");
+      if (event.error === 'network' || !navigator.onLine) {
+        setVoiceFeedback("অফলাইন! কুইক কমান্ড ব্যবহার করুন।");
+        setShowQuickInput(true);
+      } else {
+        setVoiceFeedback("বুঝতে পারিনি, আবার চেষ্টা করুন।");
+      }
       setTimeout(() => setVoiceFeedback(null), 3000);
     };
 
@@ -148,24 +162,22 @@ const App: React.FC = () => {
     recognition.start();
   };
 
-  const processVoiceCommand = (text: string) => {
-    // 1. Extract Amount
-    const amountMatch = text.match(/\d+/);
+  const processCommand = (text: string) => {
+    const convertedText = bengaliToEnglishDigits(text);
+    const amountMatch = convertedText.match(/\d+/);
     const amount = amountMatch ? parseFloat(amountMatch[0]) : null;
 
     if (!amount) {
-      setVoiceFeedback("টাকার পরিমাণ বুঝতে পারিনি।");
+      setVoiceFeedback("টাকার পরিমাণ খুঁজে পাওয়া যায়নি।");
       setTimeout(() => setVoiceFeedback(null), 3000);
       return;
     }
 
-    // 2. Determine Type (Default to Expense unless "income/salary/salary/salary" mentioned)
     let type = TransactionType.EXPENSE;
-    if (text.includes("আয়") || text.includes("পেলাম") || text.includes("বেতন") || text.includes("লাভ")) {
+    if (text.includes("আয়") || text.includes("পেলাম") || text.includes("বেতন") || text.includes("লাভ") || text.includes("যোগ")) {
       type = TransactionType.INCOME;
     }
 
-    // 3. Determine Category
     let category = "অন্যান্য";
     const categoriesToCheck = type === TransactionType.INCOME ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
     for (const cat of categoriesToCheck) {
@@ -175,7 +187,6 @@ const App: React.FC = () => {
       }
     }
 
-    // 4. Create Transaction
     const newTx: Transaction = {
       id: `tx_${Date.now()}`,
       type,
@@ -187,7 +198,16 @@ const App: React.FC = () => {
 
     setTransactions(prev => [newTx, ...prev]);
     setVoiceFeedback(`সাফল্য: ৳${amount} ${category} হিসেবে যোগ হয়েছে।`);
+    setShowQuickInput(false);
+    setQuickInputVal('');
     setTimeout(() => setVoiceFeedback(null), 4000);
+  };
+
+  const handleQuickSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (quickInputVal.trim()) {
+      processCommand(quickInputVal);
+    }
   };
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
@@ -319,6 +339,20 @@ const App: React.FC = () => {
         {activeTab === 'home' ? (
           <div className="space-y-8 animate-fadeIn pb-40 pt-2">
             
+            {/* QUICK COMMAND BAR (NEW - OFFLINE FRIENDLY) */}
+            <div className={`transition-all duration-300 overflow-hidden ${showQuickInput ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
+               <form onSubmit={handleQuickSubmit} className="bg-white p-4 rounded-[25px] shadow-sm border border-indigo-100 flex gap-2">
+                  <input 
+                    type="text" 
+                    value={quickInputVal}
+                    onChange={(e) => setQuickInputVal(e.target.value)}
+                    placeholder="যেমন: ৫০০ টাকা নাস্তা..." 
+                    className="flex-1 bg-slate-50 border-none outline-none font-bold text-[13px] px-3 rounded-xl"
+                  />
+                  <button type="submit" className="bg-indigo-600 text-white w-10 h-10 rounded-xl flex items-center justify-center border-none active:scale-95"><i className="fas fa-paper-plane text-[12px]"></i></button>
+               </form>
+            </div>
+
             {/* RECENT TRANSACTIONS */}
             <div className="space-y-4">
               <div className="flex justify-between items-center px-2">
@@ -573,7 +607,15 @@ const App: React.FC = () => {
       {/* FLOATING ACTION BUTTONS */}
       <div className="fixed bottom-28 right-6 z-[100] flex flex-col items-end gap-4">
         
-        {/* VOICE INPUT BUTTON (NEW) */}
+        {/* QUICK TEXT COMMAND BUTTON (BACKUP) */}
+        <button 
+          onClick={() => setShowQuickInput(!showQuickInput)} 
+          className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg shadow-lg transition-all active:scale-90 border-none ${showQuickInput ? 'bg-indigo-700' : 'bg-slate-700 shadow-slate-500/30'}`}
+        >
+          <i className="fas fa-keyboard text-[14px]"></i>
+        </button>
+
+        {/* VOICE INPUT BUTTON */}
         <button 
           onClick={startVoiceInput} 
           disabled={isListening}
@@ -599,7 +641,7 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* BOTTOM NAVIGATION - FLOATING ISLAND DESIGN */}
+      {/* BOTTOM NAVIGATION */}
       <div className="fixed bottom-6 left-6 right-6 z-[150]">
         <nav className="bg-white/90 backdrop-blur-xl border border-slate-200/50 px-6 py-3 flex justify-between items-center rounded-[30px] shadow-[0_15px_40px_-10px_rgba(0,0,0,0.15)] overflow-hidden">
           <button 
