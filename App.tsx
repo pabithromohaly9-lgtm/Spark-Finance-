@@ -1,23 +1,14 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Transaction, TransactionType, MonthlyArchive, Insight, FinancialSummary, ChatMessage } from './types';
+import { Transaction, TransactionType, MonthlyArchive, Insight, FinancialSummary } from './types';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_ICONS, formatCurrency } from './constants';
-import { getFinancialInsights, chatWithAI } from './services/geminiService';
+import { getFinancialInsights } from './services/geminiService';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'home' | 'analytics' | 'tools'>('home');
   const [isShrunk, setIsShrunk] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(() => localStorage.getItem('spark_profile'));
   const amountInputRef = useRef<HTMLInputElement>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  
-  // Chat States
-  const [showChat, setShowChat] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { role: 'model', text: 'স্বাগতম! আমি আপনার স্পার্ক ফিন্যান্স অ্যাসিস্ট্যান্ট। আপনার খরচ বা আয় নিয়ে কোনো প্রশ্ন আছে?' }
-  ]);
-  const [chatInput, setChatInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('spark_tx');
@@ -52,8 +43,6 @@ const App: React.FC = () => {
   // Tools state
   const [splitAmount, setSplitAmount] = useState('');
   const [splitPeople, setSplitPeople] = useState('');
-  const [goalAmount, setGoalAmount] = useState('');
-  const [goalMonths, setGoalMonths] = useState('');
 
   useEffect(() => {
     localStorage.setItem('spark_tx', JSON.stringify(transactions));
@@ -62,12 +51,7 @@ const App: React.FC = () => {
     if (profileImage) localStorage.setItem('spark_profile', profileImage);
   }, [transactions, archives, budgets, profileImage]);
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-
   const summary = useMemo<FinancialSummary>(() => {
-    // Explicitly typing sum and t to resolve arithmetic operation error on line 81
     const income = transactions.filter(t => t.type === TransactionType.INCOME).reduce((sum: number, t: Transaction) => sum + t.amount, 0);
     const expense = transactions.filter(t => t.type === TransactionType.EXPENSE).reduce((sum: number, t: Transaction) => sum + t.amount, 0);
     const categoryBreakdown: Record<string, number> = {};
@@ -86,8 +70,7 @@ const App: React.FC = () => {
   }, [transactions]);
 
   const analyticsData = useMemo(() => {
-    const total = summary.totalIncome + summary.totalExpenses;
-    const sortedBreakdown = Object.entries(summary.categoryBreakdown).sort(([, a], [, b]) => b - a).slice(0, 5);
+    const sortedBreakdown = (Object.entries(summary.categoryBreakdown) as [string, number][]).sort(([, a], [, b]) => b - a).slice(0, 5);
     const now = new Date();
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
@@ -100,26 +83,6 @@ const App: React.FC = () => {
     const budgetUsage = totalBudget > 0 ? (summary.totalExpenses / totalBudget) * 100 : 0;
     return { sortedBreakdown, last7Days, budgetUsage, avgDailySpend: summary.totalExpenses / Math.max(now.getDate(), 1) };
   }, [summary, transactions, budgets]);
-
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!chatInput.trim()) return;
-
-    const userMsg = chatInput;
-    setChatInput('');
-    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-    setIsTyping(true);
-
-    try {
-      // summary now matches FinancialSummary, so we can pass it directly
-      const aiResponse = await chatWithAI(userMsg, chatMessages, summary, transactions);
-      setChatMessages(prev => [...prev, { role: 'model', text: aiResponse }]);
-    } catch (error) {
-      setChatMessages(prev => [...prev, { role: 'model', text: 'দুঃখিত, আমি এখন উত্তর দিতে পারছি না।' }]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
 
   const addTransaction = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -138,6 +101,19 @@ const App: React.FC = () => {
     setTransactions(prev => [newTx, ...prev]);
     setModalType(null);
     setShowAddMenu(false);
+  };
+
+  const fetchAIAdvice = async () => {
+    if (transactions.length === 0) return;
+    setLoadingAI(true);
+    try {
+      const results = await getFinancialInsights(transactions, summary);
+      setInsights(results);
+    } catch (error) {
+      console.error("AI Error:", error);
+    } finally {
+      setLoadingAI(false);
+    }
   };
 
   return (
@@ -268,6 +244,23 @@ const App: React.FC = () => {
                    <div className="text-[24px] font-black text-indigo-600">৳{analyticsData.avgDailySpend.toFixed(0)}</div>
                 </div>
              </div>
+             <div className="bg-slate-900 p-8 rounded-[40px] text-white shadow-2xl relative overflow-hidden">
+                <h3 className="text-[13px] font-black uppercase tracking-widest text-indigo-400 mb-4">এআই পর্যবেক্ষণ</h3>
+                {insights.length > 0 ? (
+                  <div className="space-y-4 animate-fadeIn">
+                    {insights.slice(0, 1).map((insight, idx) => (
+                      <div key={idx} className="space-y-2">
+                        <p className="font-black text-[18px] text-white">{insight.title}</p>
+                        <p className="text-slate-400 text-[14px] font-bold">{insight.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <button onClick={fetchAIAdvice} disabled={loadingAI} className="w-full py-4 bg-indigo-600 rounded-2xl font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all">
+                    {loadingAI ? 'বিশ্লেষণ হচ্ছে...' : 'এআই পরামর্শ পান'}
+                  </button>
+                )}
+             </div>
           </div>
         ) : (
           <div className="space-y-8 animate-fadeIn pb-40 pt-2">
@@ -286,74 +279,28 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* CHAT INTERFACE (NEW) */}
-      {showChat && (
-        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-xl z-[500] flex flex-col animate-fadeIn">
-          <div className="flex justify-between items-center p-6 text-white border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-lg">
-                <i className="fas fa-robot"></i>
-              </div>
-              <div>
-                <h2 className="font-black uppercase text-[16px] tracking-widest">স্মার্ট চ্যাট</h2>
-                <p className="text-[10px] text-green-400 font-black uppercase">অনলাইন</p>
-              </div>
-            </div>
-            <button onClick={() => setShowChat(false)} className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border-none"><i className="fas fa-times"></i></button>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-            {chatMessages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slideUp`}>
-                <div className={`max-w-[85%] px-5 py-4 rounded-[28px] text-[14px] font-bold leading-relaxed ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white/10 text-white rounded-bl-none border border-white/10'}`}>
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-            {isTyping && (
-              <div className="flex justify-start animate-pulse">
-                <div className="bg-white/5 text-slate-400 px-5 py-3 rounded-[20px] text-[12px] font-black uppercase tracking-widest">এআই টাইপ করছে...</div>
-              </div>
-            )}
-            <div ref={chatEndRef}></div>
-          </div>
-
-          <form onSubmit={handleSendMessage} className="p-6 bg-white/5 border-t border-white/10 flex gap-3">
-             <input 
-              type="text" 
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="আপনার প্রশ্ন লিখুন..." 
-              className="flex-1 bg-white/10 border-none outline-none text-white font-bold px-6 py-4 rounded-full"
-             />
-             <button type="submit" className="w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center border-none shadow-lg shadow-indigo-500/30 active:scale-95 transition-all"><i className="fas fa-paper-plane"></i></button>
-          </form>
-        </div>
-      )}
-
       {/* FLOATING ACTION BUTTONS */}
       <div className="fixed bottom-28 right-6 z-[100] flex flex-col items-end gap-4">
-        {/* CHAT BUTTON */}
-        <button 
-          onClick={() => setShowChat(true)}
-          className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl shadow-lg transition-all active:scale-90 border-none bg-indigo-600 shadow-indigo-500/40"
-        >
-          <i className="fas fa-comment-dots"></i>
-        </button>
-
         {showAddMenu && (
           <div className="flex flex-col gap-3 mb-2 animate-slideUp items-end">
-            <button onClick={() => { setModalType(TransactionType.INCOME); setShowAddMenu(false); }} className="bg-green-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none transition-all active:scale-95">
+            <button onClick={() => { setModalType(TransactionType.INCOME); setShowAddMenu(false); }} className="bg-green-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none active:scale-95">
               <i className="fas fa-arrow-up mr-2"></i> আয়
             </button>
-            <button onClick={() => { setModalType(TransactionType.EXPENSE); setShowAddMenu(false); }} className="bg-rose-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none transition-all active:scale-95">
+            <button onClick={() => { setModalType(TransactionType.EXPENSE); setShowAddMenu(false); }} className="bg-rose-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none active:scale-95">
               <i className="fas fa-arrow-down mr-2"></i> ব্যয়
             </button>
           </div>
         )}
         
-        {/* MAIN ADD BUTTON */}
-        <button onClick={() => setShowAddMenu(!showAddMenu)} className={`w-14 h-14 rounded-full flex items-center justify-center text-white text-xl shadow-[0_8px_25px_rgba(0,0,0,0.2)] transition-all active:scale-90 border-none ${showAddMenu ? 'bg-slate-800 rotate-45' : 'bg-slate-900'}`}>
+        {/* MAIN ADD BUTTON (+) WITH ANIMATION AND COLOR */}
+        <button 
+            onClick={() => setShowAddMenu(!showAddMenu)} 
+            className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl transition-all active:scale-90 border-none 
+                ${showAddMenu 
+                    ? 'bg-slate-800 rotate-45 shadow-xl' 
+                    : 'bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 shadow-[0_8px_30px_rgba(79,70,229,0.5)] btn-glow'
+                }`}
+        >
           <i className="fas fa-plus"></i>
         </button>
       </div>
