@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Transaction, TransactionType, MonthlyArchive, Insight, FinancialSummary } from './types';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_ICONS, formatCurrency } from './constants';
 import { getFinancialInsights } from './services/geminiService';
+import TransactionList from './components/TransactionList';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'home' | 'analytics' | 'tools'>('home');
@@ -43,6 +44,14 @@ const App: React.FC = () => {
   // Tools state
   const [splitAmount, setSplitAmount] = useState('');
   const [splitPeople, setSplitPeople] = useState('');
+  
+  // New Tools state
+  const [emiAmount, setEmiAmount] = useState('');
+  const [emiInterest, setEmiInterest] = useState('');
+  const [emiMonths, setEmiMonths] = useState('');
+  
+  const [targetGoal, setTargetGoal] = useState('');
+  const [targetTime, setTargetTime] = useState('');
 
   useEffect(() => {
     localStorage.setItem('spark_tx', JSON.stringify(transactions));
@@ -103,6 +112,10 @@ const App: React.FC = () => {
     setShowAddMenu(false);
   };
 
+  const deleteTransaction = (id: string) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
   const fetchAIAdvice = async () => {
     if (transactions.length === 0) return;
     setLoadingAI(true);
@@ -114,6 +127,16 @@ const App: React.FC = () => {
     } finally {
       setLoadingAI(false);
     }
+  };
+
+  // EMI Calculation Logic
+  const calculateEMI = () => {
+    const P = parseFloat(emiAmount);
+    const r = parseFloat(emiInterest) / (12 * 100);
+    const n = parseInt(emiMonths);
+    if (!P || !r || !n) return 0;
+    const emi = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+    return emi.toFixed(0);
   };
 
   return (
@@ -213,7 +236,7 @@ const App: React.FC = () => {
                         <p>৳{spent} / ৳{budget}</p>
                       </div>
                       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className={`h-full bg-indigo-500`} style={{ width: `${Math.min((spent / budget) * 100, 100)}%` }}></div>
+                        <div className={`h-full ${spent > budget ? 'bg-rose-500' : 'bg-indigo-500'}`} style={{ width: `${Math.min((spent / budget) * 100, 100)}%` }}></div>
                       </div>
                     </div>
                   );
@@ -261,11 +284,26 @@ const App: React.FC = () => {
                   </button>
                 )}
              </div>
+
+             {/* Transaction History with Filters */}
+             <div className="space-y-4">
+                <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest px-2">লেনদেন ইতিহাস ও ফিল্টার</h3>
+                <TransactionList 
+                  transactions={transactions} 
+                  onDelete={deleteTransaction} 
+                  title="ইতিহাস" 
+                  budgets={budgets}
+                  categoryBreakdown={summary.categoryBreakdown}
+                />
+             </div>
           </div>
         ) : (
           <div className="space-y-8 animate-fadeIn pb-40 pt-2">
+             {/* Bill Splitter Tool */}
              <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
-               <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest">বিল স্প্লিটার</h3>
+               <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest flex items-center gap-2">
+                 <i className="fas fa-divide text-indigo-500"></i> বিল স্প্লিটার
+               </h3>
                <div className="space-y-4">
                  <input type="number" value={splitAmount} onChange={(e) => setSplitAmount(e.target.value)} placeholder="৳ মোট বিল" className="w-full p-5 bg-slate-50 rounded-[22px] font-black outline-none border-none shadow-inner" />
                  <input type="number" value={splitPeople} onChange={(e) => setSplitPeople(e.target.value)} placeholder="মানুষের সংখ্যা" className="w-full p-5 bg-slate-50 rounded-[22px] font-black outline-none border-none shadow-inner" />
@@ -273,6 +311,39 @@ const App: React.FC = () => {
                <div className="p-8 bg-indigo-600 rounded-[30px] text-center text-white">
                  <p className="text-[11px] font-bold uppercase mb-2">মাথা পিছু</p>
                  <p className="text-[32px] font-black">৳ {splitAmount && splitPeople ? (parseFloat(splitAmount) / parseInt(splitPeople)).toFixed(0) : '০'}</p>
+               </div>
+             </div>
+
+             {/* EMI Calculator Tool */}
+             <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+               <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest flex items-center gap-2">
+                 <i className="fas fa-calculator text-indigo-500"></i> কিস্তি (EMI) ক্যালকুলেটর
+               </h3>
+               <div className="space-y-4">
+                 <input type="number" value={emiAmount} onChange={(e) => setEmiAmount(e.target.value)} placeholder="৳ ঋণের পরিমাণ" className="w-full p-5 bg-slate-50 rounded-[22px] font-black outline-none border-none shadow-inner" />
+                 <div className="grid grid-cols-2 gap-4">
+                    <input type="number" value={emiInterest} onChange={(e) => setEmiInterest(e.target.value)} placeholder="% সুদের হার" className="p-5 bg-slate-50 rounded-[22px] font-black outline-none border-none shadow-inner" />
+                    <input type="number" value={emiMonths} onChange={(e) => setEmiMonths(e.target.value)} placeholder="মাস" className="p-5 bg-slate-50 rounded-[22px] font-black outline-none border-none shadow-inner" />
+                 </div>
+               </div>
+               <div className="p-8 bg-slate-900 rounded-[30px] text-center text-white">
+                 <p className="text-[11px] font-bold uppercase mb-2">প্রতি মাসের কিস্তি</p>
+                 <p className="text-[32px] font-black text-indigo-400">৳ {calculateEMI()}</p>
+               </div>
+             </div>
+
+             {/* Savings Goal Tool */}
+             <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+               <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest flex items-center gap-2">
+                 <i className="fas fa-bullseye text-indigo-500"></i> সঞ্চয় লক্ষ্যমাত্রা
+               </h3>
+               <div className="space-y-4">
+                 <input type="number" value={targetGoal} onChange={(e) => setTargetGoal(e.target.value)} placeholder="৳ সঞ্চয়ের লক্ষ্য (মোট)" className="w-full p-5 bg-slate-50 rounded-[22px] font-black outline-none border-none shadow-inner" />
+                 <input type="number" value={targetTime} onChange={(e) => setTargetTime(e.target.value)} placeholder="কত মাসে অর্জন করতে চান?" className="w-full p-5 bg-slate-50 rounded-[22px] font-black outline-none border-none shadow-inner" />
+               </div>
+               <div className="p-8 bg-indigo-50 border border-indigo-100 rounded-[30px] text-center">
+                 <p className="text-[11px] font-black uppercase text-indigo-400 mb-2">প্রতি মাসে জমাতে হবে</p>
+                 <p className="text-[32px] font-black text-indigo-600">৳ {targetGoal && targetTime ? (parseFloat(targetGoal) / parseInt(targetTime)).toFixed(0) : '০'}</p>
                </div>
              </div>
           </div>
