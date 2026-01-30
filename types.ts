@@ -4,7 +4,6 @@ export enum TransactionType {
   EXPENSE = 'EXPENSE'
 }
 
-// Added missing Enums and Interfaces to resolve import errors in components
 export enum IncomeCategory {
   SALARY = 'বেতন',
   BUSINESS = 'ব্যবসা',
@@ -28,9 +27,9 @@ export enum Frequency {
   MONTHLY = 'MONTHLY'
 }
 
-export interface UserSettings {
-  budgets: Record<string, number>;
-  categoryColors: Record<string, string>;
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
 }
 
 export interface Transaction {
@@ -42,6 +41,11 @@ export interface Transaction {
   note: string;
   isRecurring?: boolean;
   frequency?: Frequency;
+}
+
+export interface UserSettings {
+  categoryColors: Record<string, string>;
+  budgets: Record<string, number>;
 }
 
 export interface MonthlyArchive {
