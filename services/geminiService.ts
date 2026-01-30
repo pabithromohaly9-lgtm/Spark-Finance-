@@ -7,8 +7,7 @@ export const getFinancialInsights = async (
   summary: FinancialSummary
 ): Promise<Insight[]> => {
   // Ensure the API key is present
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
+  if (!process.env.API_KEY) {
     console.warn("API Key is missing.");
     return [{
       title: "এআই সিস্টেম আপডেট",
@@ -17,8 +16,8 @@ export const getFinancialInsights = async (
     }];
   }
 
-  // Create instance right before use
-  const ai = new GoogleGenAI({ apiKey });
+  // Create instance right before use as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const recentTransactions = transactions.slice(0, 10).map(t => ({
     type: t.type,
@@ -49,7 +48,8 @@ export const getFinancialInsights = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      // Using gemini-3-pro-preview for complex reasoning and data analysis tasks
+      model: "gemini-3-pro-preview",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -68,6 +68,7 @@ export const getFinancialInsights = async (
       },
     });
 
+    // Accessing .text as a property as per guidelines
     const result = response.text;
     if (!result) return [];
     

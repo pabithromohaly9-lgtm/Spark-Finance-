@@ -10,6 +10,10 @@ const App: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(() => localStorage.getItem('spark_profile'));
   const amountInputRef = useRef<HTMLInputElement>(null);
   
+  // Voice Recognition States
+  const [isListening, setIsListening] = useState(false);
+  const [voiceFeedback, setVoiceFeedback] = useState<string | null>(null);
+
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('spark_tx');
     return saved ? JSON.parse(saved) : [];
@@ -73,14 +77,118 @@ const App: React.FC = () => {
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
 
-    return { incomePercent, expensePercent, savingsRate, sortedBreakdown };
-  }, [summary]);
+    const now = new Date();
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayTotal = transactions
+        .filter(t => t.type === TransactionType.EXPENSE && t.date.startsWith(dateStr))
+        .reduce((sum, t) => sum + t.amount, 0);
+      return { 
+        day: d.toLocaleDateString('bn-BD', { weekday: 'short' }), 
+        amount: dayTotal 
+      };
+    }).reverse();
+
+    const totalBudget = (Object.values(budgets) as number[]).reduce((sum, b) => sum + b, 0);
+    const budgetUsage = totalBudget > 0 ? (summary.expense / totalBudget) * 100 : 0;
+
+    return { 
+      incomePercent, 
+      expensePercent, 
+      savingsRate, 
+      sortedBreakdown, 
+      last7Days,
+      budgetUsage,
+      totalBudget,
+      avgDailySpend: summary.expense / Math.max(now.getDate(), 1)
+    };
+  }, [summary, transactions, budgets]);
 
   const financialHealthScore = useMemo(() => {
     if (summary.income === 0) return 0;
     const score = Math.round(analyticsData.savingsRate + 50);
     return Math.min(Math.max(score, 0), 100);
   }, [summary, analyticsData]);
+
+  // VOICE RECOGNITION LOGIC
+  const startVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("দুঃখিত, আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই।");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'bn-BD';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceFeedback("শুনছি... বলুন (যেমন: ১০০ টাকা খাবার খরচ)");
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.toLowerCase();
+      processVoiceCommand(transcript);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+      setVoiceFeedback("বুঝতে পারিনি, আবার চেষ্টা করুন।");
+      setTimeout(() => setVoiceFeedback(null), 3000);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
+  const processVoiceCommand = (text: string) => {
+    // 1. Extract Amount
+    const amountMatch = text.match(/\d+/);
+    const amount = amountMatch ? parseFloat(amountMatch[0]) : null;
+
+    if (!amount) {
+      setVoiceFeedback("টাকার পরিমাণ বুঝতে পারিনি।");
+      setTimeout(() => setVoiceFeedback(null), 3000);
+      return;
+    }
+
+    // 2. Determine Type (Default to Expense unless "income/salary/salary/salary" mentioned)
+    let type = TransactionType.EXPENSE;
+    if (text.includes("আয়") || text.includes("পেলাম") || text.includes("বেতন") || text.includes("লাভ")) {
+      type = TransactionType.INCOME;
+    }
+
+    // 3. Determine Category
+    let category = "অন্যান্য";
+    const categoriesToCheck = type === TransactionType.INCOME ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+    for (const cat of categoriesToCheck) {
+      if (text.includes(cat)) {
+        category = cat;
+        break;
+      }
+    }
+
+    // 4. Create Transaction
+    const newTx: Transaction = {
+      id: `tx_${Date.now()}`,
+      type,
+      amount,
+      category,
+      note: text,
+      date: new Date().toISOString()
+    };
+
+    setTransactions(prev => [newTx, ...prev]);
+    setVoiceFeedback(`সাফল্য: ৳${amount} ${category} হিসেবে যোগ হয়েছে।`);
+    setTimeout(() => setVoiceFeedback(null), 4000);
+  };
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     const scrollPos = e.currentTarget.scrollTop;
@@ -182,8 +290,8 @@ const App: React.FC = () => {
              {isShrunk && <h1 className="font-black text-white text-[18px] animate-fadeIn">স্পার্ক</h1>}
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowBudgetSettings(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center transition-all border-none active:scale-90"><i className="fas fa-bullseye text-[13px]"></i></button>
-            <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center transition-all border-none active:scale-90"><i className="fas fa-history text-[13px]"></i></button>
+            <button onClick={() => setShowBudgetSettings(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border-none active:scale-90 transition-all"><i className="fas fa-bullseye text-[13px]"></i></button>
+            <button onClick={() => setShowHistory(true)} className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border-none active:scale-90 transition-all"><i className="fas fa-history text-[13px]"></i></button>
           </div>
         </div>
         
@@ -284,22 +392,49 @@ const App: React.FC = () => {
         ) : activeTab === 'analytics' ? (
           <div className="space-y-8 animate-fadeIn pb-40 pt-2">
              
-             {/* MONTHLY OVERVIEW CARD */}
+             {/* WEEKLY TREND CHART */}
              <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
-                <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest">ব্যয় বিশ্লেষণ</h3>
-                <div className="flex h-10 w-full rounded-2xl overflow-hidden shadow-inner bg-slate-50">
-                  <div className="bg-green-500 h-full transition-all duration-700" style={{ width: `${analyticsData.incomePercent}%` }}></div>
-                  <div className="bg-rose-500 h-full transition-all duration-700" style={{ width: `${analyticsData.expensePercent}%` }}></div>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest">সাপ্তাহিক ট্রেন্ড</h3>
+                  <span className="text-[10px] font-black text-slate-400 uppercase">গত ৭ দিন</span>
                 </div>
-                <div className="flex justify-between text-[11px] font-black uppercase px-2">
-                  <span className="text-green-600">আয়: {analyticsData.incomePercent.toFixed(0)}%</span>
-                  <span className="text-rose-600">ব্যয়: {analyticsData.expensePercent.toFixed(0)}%</span>
+                <div className="flex items-end justify-between h-32 gap-2 pt-4">
+                   {analyticsData.last7Days.map((d, i) => {
+                     const max = Math.max(...analyticsData.last7Days.map(day => day.amount), 1);
+                     const height = (d.amount / max) * 100;
+                     return (
+                       <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                          <div className="relative w-full flex justify-center items-end h-24">
+                            <div 
+                              className={`w-full max-w-[12px] rounded-full transition-all duration-500 ${d.amount > 0 ? 'bg-indigo-600 shadow-[0_4px_10px_rgba(79,70,229,0.3)]' : 'bg-slate-100'}`} 
+                              style={{ height: `${Math.max(height, 5)}%` }}
+                            ></div>
+                            <div className="absolute -top-6 bg-slate-800 text-white text-[9px] font-black py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">৳{d.amount}</div>
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">{d.day}</span>
+                       </div>
+                     );
+                   })}
                 </div>
-                <div className="p-6 bg-slate-50 rounded-[30px] border border-slate-100 text-center">
-                   <p className="text-[11px] font-black text-slate-400 uppercase mb-1">সঞ্চয়ের হার</p>
-                   <p className={`text-[32px] font-black ${analyticsData.savingsRate > 20 ? 'text-indigo-600' : 'text-amber-600'}`}>
-                     {analyticsData.savingsRate.toFixed(1)}%
-                   </p>
+             </div>
+
+             {/* BUDGET HEALTH & SMART STATS */}
+             <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm">
+                   <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">বাজেট ব্যবহার</p>
+                   <div className="flex items-center gap-3">
+                      <div className="text-[24px] font-black text-slate-800">{analyticsData.budgetUsage.toFixed(0)}%</div>
+                      <div className="flex-1 h-2 bg-slate-50 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-1000 ${analyticsData.budgetUsage > 90 ? 'bg-rose-500' : 'bg-green-500'}`} 
+                          style={{ width: `${Math.min(analyticsData.budgetUsage, 100)}%` }}
+                        ></div>
+                      </div>
+                   </div>
+                </div>
+                <div className="bg-white p-6 rounded-[35px] border border-slate-100 shadow-sm">
+                   <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">গড় দৈনিক ব্যয়</p>
+                   <div className="text-[20px] font-black text-indigo-600">৳{analyticsData.avgDailySpend.toFixed(0)}</div>
                 </div>
              </div>
 
@@ -308,42 +443,50 @@ const App: React.FC = () => {
                <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest px-2">সর্বোচ্চ ব্যয় (টপ ৫)</h3>
                <div className="space-y-3">
                  {analyticsData.sortedBreakdown.length > 0 ? analyticsData.sortedBreakdown.map(([cat, val]) => (
-                   <div key={cat} className="bg-white p-5 rounded-[28px] shadow-sm border border-slate-100 flex items-center justify-between transition-all hover:border-indigo-100">
+                   <div key={cat} className="bg-white p-5 rounded-[28px] shadow-sm border border-slate-100 flex items-center justify-between transition-all hover:border-indigo-100 hover:translate-x-1">
                      <div className="flex items-center gap-4">
-                       <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                       <div className="w-11 h-11 bg-slate-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
                          <i className={`fas ${CATEGORY_ICONS[cat]}`}></i>
                        </div>
-                       <p className="font-black text-slate-800 text-[15px]">{cat}</p>
+                       <div className="overflow-hidden">
+                          <p className="font-black text-slate-800 text-[15px]">{cat}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">মোট ব্যয়ের {((val / (summary.expense || 1)) * 100).toFixed(1)}%</p>
+                       </div>
                      </div>
-                     <p className="font-black text-slate-900">৳{val}</p>
+                     <p className="font-black text-slate-900 text-[16px]">৳{val}</p>
                    </div>
                  )) : (
-                   <div className="py-10 text-center text-slate-400 font-bold uppercase text-[12px]">কোনো ব্যয়ের রেকর্ড নেই।</div>
+                   <div className="py-12 text-center text-slate-400 font-bold uppercase text-[12px] bg-white rounded-[35px] border border-slate-100">কোনো রেকর্ড নেই</div>
                  )}
                </div>
              </div>
 
              {/* SMART AI SUMMARY WIDGET */}
              <div className="bg-slate-900 p-8 rounded-[40px] text-white space-y-4 relative overflow-hidden shadow-2xl">
-                <h3 className="text-[13px] font-black uppercase tracking-widest text-indigo-400">এআই অবজারভেশন</h3>
+                <div className="flex justify-between items-center relative z-10">
+                   <h3 className="text-[13px] font-black uppercase tracking-widest text-indigo-400">এআই অবজারভেশন</h3>
+                   <i className="fas fa-microchip text-indigo-500/50"></i>
+                </div>
                 {insights.length > 0 ? (
-                  <div className="space-y-4 animate-fadeIn">
+                  <div className="space-y-4 animate-fadeIn relative z-10">
                     {insights.slice(0, 1).map((insight, idx) => (
                       <div key={idx} className="space-y-2">
-                        <p className="font-black text-[16px]">{insight.title}</p>
-                        <p className="text-slate-400 text-[13px] font-bold leading-relaxed">{insight.description}</p>
+                        <p className="font-black text-[18px] leading-tight text-white">{insight.title}</p>
+                        <p className="text-slate-400 text-[14px] font-bold leading-relaxed">{insight.description}</p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <p className="text-slate-400 text-[13px] font-bold">আপনার লেনদেন বিশ্লেষণ করে স্মার্ট টিপস পান।</p>
-                    <button onClick={fetchAIAdvice} disabled={loadingAI} className="w-full py-4 bg-indigo-600 rounded-2xl font-black uppercase text-[11px] tracking-widest border-none transition-all active:scale-95 shadow-lg shadow-indigo-500/20">
+                  <div className="space-y-5 relative z-10">
+                    <p className="text-slate-400 text-[14px] font-bold leading-relaxed">আপনার লেনদেন বিশ্লেষণ করে স্মার্ট টিপস পান যা আপনাকে সঞ্চয় বৃদ্ধিতে সাহায্য করবে।</p>
+                    <button onClick={fetchAIAdvice} disabled={loadingAI} className="w-full py-4 bg-indigo-600 rounded-2xl font-black uppercase text-[11px] tracking-widest border-none transition-all active:scale-95 shadow-lg shadow-indigo-500/30">
+                      {loadingAI ? <i className="fas fa-spinner animate-spin mr-2"></i> : null}
                       {loadingAI ? 'বিশ্লেষণ হচ্ছে...' : 'বিশ্লেষণ শুরু করুন'}
                     </button>
                   </div>
                 )}
-                <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl"></div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
+                <div className="absolute -left-10 -top-10 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl"></div>
              </div>
 
           </div>
@@ -417,18 +560,40 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* FLOATING ACTION BUTTON */}
-      <div className="fixed bottom-28 right-6 z-[100]">
+      {/* VOICE FEEDBACK OVERLAY */}
+      {voiceFeedback && (
+        <div className="fixed bottom-44 left-6 right-6 z-[200] animate-fadeIn">
+           <div className="bg-slate-900/90 backdrop-blur-md text-white px-6 py-4 rounded-[25px] shadow-2xl flex items-center gap-4 border border-white/10">
+              <div className={`w-3 h-3 rounded-full ${isListening ? 'bg-rose-500 animate-pulse' : 'bg-green-500'}`}></div>
+              <p className="text-[13px] font-black uppercase tracking-wide flex-1">{voiceFeedback}</p>
+           </div>
+        </div>
+      )}
+
+      {/* FLOATING ACTION BUTTONS */}
+      <div className="fixed bottom-28 right-6 z-[100] flex flex-col items-end gap-4">
+        
+        {/* VOICE INPUT BUTTON (NEW) */}
+        <button 
+          onClick={startVoiceInput} 
+          disabled={isListening}
+          className={`w-14 h-14 rounded-full flex items-center justify-center text-white text-xl shadow-lg transition-all active:scale-90 border-none ${isListening ? 'bg-rose-600 animate-pulse' : 'bg-sky-500 shadow-sky-500/30'}`}
+        >
+          <i className={`fas ${isListening ? 'fa-circle-stop' : 'fa-microphone'}`}></i>
+        </button>
+
         {showAddMenu && (
-          <div className="flex flex-col gap-3 mb-4 animate-slideUp items-end">
-            <button onClick={() => { setModalType(TransactionType.INCOME); setShowAddMenu(false); }} className="bg-green-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none active:scale-95">
+          <div className="flex flex-col gap-3 mb-2 animate-slideUp items-end">
+            <button onClick={() => { setModalType(TransactionType.INCOME); setShowAddMenu(false); }} className="bg-green-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none active:scale-95 transition-all hover:bg-green-700">
               <i className="fas fa-arrow-up mr-2"></i> আয়
             </button>
-            <button onClick={() => { setModalType(TransactionType.EXPENSE); setShowAddMenu(false); }} className="bg-rose-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none active:scale-95">
+            <button onClick={() => { setModalType(TransactionType.EXPENSE); setShowAddMenu(false); }} className="bg-rose-600 text-white px-5 py-3 rounded-[18px] font-black text-[12px] uppercase tracking-widest shadow-xl border-none active:scale-95 transition-all hover:bg-rose-700">
               <i className="fas fa-arrow-down mr-2"></i> ব্যয়
             </button>
           </div>
         )}
+        
+        {/* MAIN ADD BUTTON */}
         <button onClick={() => setShowAddMenu(!showAddMenu)} className={`w-14 h-14 rounded-full flex items-center justify-center text-white text-xl shadow-[0_8px_25px_rgba(79,70,229,0.4)] transition-all active:scale-90 border-none ${showAddMenu ? 'bg-slate-800 rotate-45' : 'bg-indigo-600'}`}>
           <i className="fas fa-plus"></i>
         </button>
