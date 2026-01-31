@@ -58,6 +58,7 @@ const App: React.FC = () => {
     localStorage.setItem('spark_archives', JSON.stringify(archives));
     localStorage.setItem('spark_budgets', JSON.stringify(budgets));
     if (profileImage) localStorage.setItem('spark_profile', profileImage);
+    else localStorage.removeItem('spark_profile');
   }, [transactions, archives, budgets, profileImage]);
 
   const summary = useMemo<FinancialSummary>(() => {
@@ -113,13 +114,40 @@ const App: React.FC = () => {
   };
 
   const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    if (window.confirm('আপনি কি এই লেনদেনটি মুছে ফেলতে নিশ্চিত?')) {
+      setTransactions(prev => prev.filter(t => t.id !== id));
+    }
   };
 
   const clearAllTransactions = () => {
     if (window.confirm('আপনি কি নিশ্চিত যে আপনি সমস্ত লেনদেন মুছে ফেলে ব্যালেন্স ০ করতে চান?')) {
       setTransactions([]);
       setShowHistory(false);
+    }
+  };
+
+  const resetAllAppData = () => {
+    if (window.confirm('সাবধান! এটি আপনার সমস্ত লেনদেন, বাজেট এবং প্রোফাইল তথ্য স্থায়ীভাবে মুছে ফেলবে। আপনি কি এগিয়ে যেতে চান?')) {
+      setTransactions([]);
+      setBudgets({
+        'খাবার': 5000,
+        'যাতায়াত': 2000,
+        'ভাড়া': 10000,
+        'বিল': 3000,
+        'কেনাকাটা': 4000,
+        'স্বাস্থ্য': 2000,
+        'অন্যান্য': 2000
+      });
+      setProfileImage(null);
+      setInsights([]);
+      setSplitAmount('');
+      setSplitPeople('');
+      setEmiAmount('');
+      setEmiInterest('');
+      setEmiMonths('');
+      setTargetGoal('');
+      setTargetTime('');
+      alert('সব ডেটা সফলভাবে মুছে ফেলা হয়েছে।');
     }
   };
 
@@ -355,6 +383,22 @@ const App: React.FC = () => {
                  <p className="text-[11px] font-black uppercase text-indigo-400 mb-2">প্রতি মাসে জমাতে হবে</p>
                  <p className="text-[32px] font-black text-indigo-600">৳ {targetGoal && targetTime ? (parseFloat(targetGoal) / parseInt(targetTime)).toFixed(0) : '০'}</p>
                </div>
+             </div>
+
+             {/* Danger Zone / Reset Tool */}
+             <div className="bg-rose-50 p-8 rounded-[40px] border border-rose-100 shadow-sm space-y-6">
+                <h3 className="font-black text-rose-800 uppercase text-[13px] tracking-widest flex items-center gap-2">
+                  <i className="fas fa-exclamation-triangle"></i> বিপদজনক এলাকা (Danger Zone)
+                </h3>
+                <p className="text-[12px] font-bold text-rose-600 leading-relaxed">
+                  এখান থেকে আপনি অ্যাপের সমস্ত তথ্য (লেনদেন, বাজেট, প্রোফাইল ছবি) স্থায়ীভাবে মুছে ফেলতে পারেন। এটি অপরিবর্তনীয়।
+                </p>
+                <button 
+                  onClick={resetAllAppData}
+                  className="w-full py-5 bg-rose-600 text-white rounded-[22px] font-black uppercase text-[12px] tracking-widest shadow-lg shadow-rose-200 active:scale-95 transition-all border-none"
+                >
+                  সব ডেটা মুছে ফেলুন
+                </button>
              </div>
           </div>
         )}
