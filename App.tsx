@@ -116,6 +116,13 @@ const App: React.FC = () => {
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
+  const clearAllTransactions = () => {
+    if (window.confirm('আপনি কি নিশ্চিত যে আপনি সমস্ত লেনদেন মুছে ফেলে ব্যালেন্স ০ করতে চান?')) {
+      setTransactions([]);
+      setShowHistory(false);
+    }
+  };
+
   const fetchAIAdvice = async () => {
     if (transactions.length === 0) return;
     setLoadingAI(true);
@@ -129,7 +136,6 @@ const App: React.FC = () => {
     }
   };
 
-  // EMI Calculation Logic
   const calculateEMI = () => {
     const P = parseFloat(emiAmount);
     const r = parseFloat(emiInterest) / (12 * 100);
@@ -198,8 +204,8 @@ const App: React.FC = () => {
               </div>
               {transactions.length > 0 ? (
                 <div className="space-y-3">
-                  {transactions.slice(0, 6).map(t => (
-                    <div key={t.id} className="bg-white p-4 rounded-[24px] shadow-sm flex items-center justify-between border border-slate-100">
+                  {transactions.slice(0, 10).map(t => (
+                    <div key={t.id} className="bg-white p-4 rounded-[24px] shadow-sm flex items-center justify-between border border-slate-100 group transition-all hover:border-indigo-100">
                       <div className="flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg ${t.type === TransactionType.INCOME ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
                           <i className={`fas ${CATEGORY_ICONS[t.category] || 'fa-tag'}`}></i>
@@ -209,9 +215,17 @@ const App: React.FC = () => {
                           <p className="text-[11px] text-slate-400 font-bold uppercase">{t.note || 'সাধারণ'}</p>
                         </div>
                       </div>
-                      <p className={`font-black text-[15px] ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-slate-800'}`}>
-                        {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount}
-                      </p>
+                      <div className="flex items-center gap-4">
+                        <p className={`font-black text-[15px] ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-slate-800'}`}>
+                          {t.type === TransactionType.INCOME ? '+' : '-'}{t.amount}
+                        </p>
+                        <button 
+                          onClick={() => deleteTransaction(t.id)}
+                          className="w-8 h-8 rounded-full bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center transition-all border-none"
+                        >
+                          <i className="fas fa-trash-alt text-[12px]"></i>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -285,7 +299,6 @@ const App: React.FC = () => {
                 )}
              </div>
 
-             {/* Transaction History with Filters */}
              <div className="space-y-4">
                 <h3 className="font-black text-slate-400 text-[13px] uppercase tracking-widest px-2">লেনদেন ইতিহাস ও ফিল্টার</h3>
                 <TransactionList 
@@ -299,7 +312,6 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-8 animate-fadeIn pb-40 pt-2">
-             {/* Bill Splitter Tool */}
              <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
                <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest flex items-center gap-2">
                  <i className="fas fa-divide text-indigo-500"></i> বিল স্প্লিটার
@@ -314,7 +326,6 @@ const App: React.FC = () => {
                </div>
              </div>
 
-             {/* EMI Calculator Tool */}
              <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
                <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest flex items-center gap-2">
                  <i className="fas fa-calculator text-indigo-500"></i> কিস্তি (EMI) ক্যালকুলেটর
@@ -332,7 +343,6 @@ const App: React.FC = () => {
                </div>
              </div>
 
-             {/* Savings Goal Tool */}
              <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
                <h3 className="font-black text-slate-800 uppercase text-[13px] tracking-widest flex items-center gap-2">
                  <i className="fas fa-bullseye text-indigo-500"></i> সঞ্চয় লক্ষ্যমাত্রা
@@ -363,7 +373,6 @@ const App: React.FC = () => {
           </div>
         )}
         
-        {/* MAIN ADD BUTTON (+) WITH ANIMATION AND COLOR */}
         <button 
             onClick={() => setShowAddMenu(!showAddMenu)} 
             className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl transition-all active:scale-90 border-none 
@@ -414,7 +423,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* BUDGET MODAL (SIMPLIFIED) */}
+      {/* BUDGET MODAL */}
       {showBudgetSettings && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex items-end justify-center">
           <div className="bg-white w-full max-w-md rounded-t-[40px] p-8 animate-slideUp overflow-y-auto max-h-[85vh] border-none">
@@ -435,15 +444,48 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* HISTORY MODAL (SIMPLIFIED) */}
+      {/* HISTORY MODAL */}
       {showHistory && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[300] flex flex-col">
           <div className="bg-white flex-1 mt-20 rounded-t-[40px] p-8 overflow-y-auto animate-slideUp border-none">
              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-[18px] font-black uppercase tracking-widest">ইতিহাস</h2>
+                <h2 className="text-[18px] font-black uppercase tracking-widest">ইতিহাস ও রিসেট</h2>
                 <button onClick={() => setShowHistory(false)} className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center border-none"><i className="fas fa-times"></i></button>
              </div>
-             <p className="text-center py-24 text-slate-400 font-black uppercase text-[12px]">পুরানো রেকর্ড নেই</p>
+             
+             {transactions.length > 0 ? (
+               <div className="space-y-8">
+                 <div className="p-6 bg-rose-50 border border-rose-100 rounded-[30px] flex flex-col items-center gap-4">
+                   <p className="text-rose-600 font-black text-center text-[13px] uppercase tracking-wider">সাবধান! ব্যালেন্স রিসেট করলে আপনার সব লেনদেন স্থায়ীভাবে মুছে যাবে।</p>
+                   <button 
+                     onClick={clearAllTransactions} 
+                     className="w-full py-4 bg-rose-600 text-white rounded-[20px] font-black uppercase text-[11px] tracking-widest shadow-lg shadow-rose-200 active:scale-95 transition-all"
+                   >
+                     <i className="fas fa-trash-alt mr-2"></i> ব্যালেন্স রিসেট করুন
+                   </button>
+                 </div>
+                 
+                 <div className="space-y-4">
+                    <h3 className="font-black text-slate-400 text-[11px] uppercase tracking-widest">সব লেনদেন ({transactions.length})</h3>
+                    <div className="space-y-3">
+                      {transactions.map(t => (
+                        <div key={t.id} className="bg-slate-50 p-4 rounded-[22px] flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[14px] font-black text-slate-800">{t.category}</span>
+                            <span className="text-[10px] font-bold text-slate-400">{new Date(t.date).toLocaleDateString('bn-BD')}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <p className={`font-black ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-rose-600'}`}>৳{t.amount}</p>
+                            <button onClick={() => deleteTransaction(t.id)} className="w-8 h-8 rounded-full bg-white text-rose-400 flex items-center justify-center border-none shadow-sm"><i className="fas fa-trash-alt text-[10px]"></i></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                 </div>
+               </div>
+             ) : (
+               <p className="text-center py-24 text-slate-400 font-black uppercase text-[12px]">পুরানো রেকর্ড নেই</p>
+             )}
           </div>
         </div>
       )}
