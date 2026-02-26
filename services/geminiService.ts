@@ -8,6 +8,13 @@ export const getFinancialInsights = async (
   transactions: Transaction[],
   summary: FinancialSummary
 ): Promise<Insight[]> => {
+  if (!navigator.onLine) {
+    return [{
+      title: "অফলাইন মোড",
+      description: "এআই পরামর্শ পেতে ইন্টারনেটের প্রয়োজন। আপনার বর্তমান ডেটা অফলাইনে সংরক্ষিত আছে।",
+      type: "info"
+    }];
+  }
   if (!process.env.API_KEY) return [];
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -39,6 +46,7 @@ export const chatWithAI = async (
   summary: FinancialSummary,
   transactions: Transaction[]
 ): Promise<string> => {
+  if (!navigator.onLine) return "আপনি বর্তমানে অফলাইনে আছেন। এআই চ্যাট ব্যবহার করতে ইন্টারনেটের প্রয়োজন।";
   if (!process.env.API_KEY) return "এপিআই কী পাওয়া যায়নি।";
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
